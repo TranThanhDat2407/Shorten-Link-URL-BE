@@ -37,7 +37,7 @@ public class User extends BaseEntityWIthUpdate {
     private String pictureUrl;
 
     @Column(name = "is_active")
-    private boolean is_active;
+    private boolean isActive;
 
     @Enumerated(EnumType.STRING)
     private Role role;

@@ -1,4 +1,4 @@
-package com.example.short_link.sercurity;
+package com.example.short_link.sercurity.user;
 
 import com.example.short_link.entity.User;
 import org.springframework.security.core.GrantedAuthority;
@@ -48,6 +48,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return user.is_active();
+        return user.isActive();
     }
 }
