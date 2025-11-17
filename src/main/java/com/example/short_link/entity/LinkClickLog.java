@@ -1,11 +1,17 @@
 package com.example.short_link.entity;
 
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "link_click_logs")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class LinkClickLog extends BaseEntity{
     @Column(name = "clicked_at")
     private Instant clicked_at;

@@ -1,7 +1,7 @@
 package com.example.short_link.entity;
 
-import com.example.short_link.enums.AuthProvider;
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -9,6 +9,11 @@ import java.util.List;
 
 @Entity
 @Table(name = "links")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Link extends BaseEntity{
     @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
     private String originalUrl;

@@ -1,14 +1,25 @@
 package com.example.short_link.entity;
 
 import com.example.short_link.enums.AuthProvider;
+import com.example.short_link.enums.Role;
 import jakarta.persistence.*;
+import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Entity
 @Table(name = "users")
-public class User extends BaseEntityWIthUpdate{
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class User extends BaseEntityWIthUpdate {
     @Column(name = "email", unique = true)
     private String email;
 
@@ -25,6 +36,13 @@ public class User extends BaseEntityWIthUpdate{
     @Column(name = "picture_url")
     private String pictureUrl;
 
+    @Column(name = "is_active")
+    private boolean is_active;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Link> links = new ArrayList<>();
+
 }
