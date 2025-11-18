@@ -4,6 +4,7 @@ import com.example.short_link.dto.request.LoginRequest;
 import com.example.short_link.dto.request.RegisterRequest;
 import com.example.short_link.dto.response.AuthResponse;
 import com.example.short_link.entity.User;
+import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
 import com.example.short_link.exception.DataNotFoundException;
 import com.example.short_link.exception.PermissionDenyException;
@@ -49,19 +50,25 @@ public class UserServiceImpl implements UserService {
 
         User user = User.builder()
                 .email(request.getEmail())
-                .password(request.getPassword())
+                .password(passwordEncoder.encode(request.getPassword()))
                 //fullname = subtring trước @
                 .fullName(request.getEmail().substring(0, indexAt))
                 .role(Role.USER)
+                .provider(AuthProvider.LOCAL)
                 .isActive(true)
                 .build();
 
+        userRepository.save(user);
         return user;
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
         Optional<User> user = userRepository.findByEmail(request.getEmail());
+
+        if(user.isEmpty()){
+            throw new UserNotFoundException("User Not Found");
+        }
 
         User existingUser = user.get();
 
@@ -70,9 +77,10 @@ public class UserServiceImpl implements UserService {
                     ("Wrong password");
         }
 
-        if (!user.get().isActive()) {
+        if (!existingUser.isActive()) {
             throw new DataNotFoundException("User is locked");
         }
+
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(existingUser.getEmail());
         String token = jwtService.generateToken(userDetails);
 
