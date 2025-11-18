@@ -24,12 +24,22 @@ public class JwtService {
     @Value("${jwt.secretKey}")
     private String secretKey;
 
-    //tạo token
-    public String generateToken(UserDetails userDetails){
+    public String generateAccessToken(UserDetails userDetails){
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
+                // Sử dụng expiration (thời gian ngắn)
                 .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000L))
+                .signWith(getSignKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String generateRefreshToken(UserDetails userDetails){
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
+                // Sử dụng expirationRefreshToken (thời gian dài)
+                .setExpiration(new Date(System.currentTimeMillis() + expirationRefreshToken * 1000L))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

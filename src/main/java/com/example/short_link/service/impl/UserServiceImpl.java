@@ -19,12 +19,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final UserRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtService jwtService;
@@ -64,17 +66,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        Optional<User> user = userRepository.findByEmail(request.getEmail());
+        Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
 
-        if(user.isEmpty()){
+        if(userOptional.isEmpty()){
             throw new UserNotFoundException("User Not Found");
         }
 
-        User existingUser = user.get();
+        User existingUser = userOptional.get();
 
         if (!passwordEncoder.matches(request.getPassword(), existingUser.getPassword())) {
-            throw new BadCredentialsException
-                    ("Wrong password");
+            throw new BadCredentialsException("Wrong password");
         }
 
         if (!existingUser.isActive()) {
@@ -82,10 +83,18 @@ public class UserServiceImpl implements UserService {
         }
 
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(existingUser.getEmail());
-        String token = jwtService.generateToken(userDetails);
 
+        // 1. TẠO ACCESS TOKEN (sử dụng thời gian ngắn)
+        String accessToken = jwtService.generateAccessToken(userDetails);
+
+        // 2. TẠO REFRESH TOKEN (sử dụng thời gian dài)
+        String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+
+        // 4. TRẢ VỀ CẢ HAI TOKEN
         return AuthResponse.builder()
-                .token(token)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .build();
     }
 
@@ -94,4 +103,5 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Invalid user"));
     }
+
 }

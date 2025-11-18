@@ -25,19 +25,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String path = request.getRequestURI();
-
-        // So sánh mẫu URL công khai:
-        // Vì URL Controller của bạn là /api/v1/auth/register
-        // Nên kiểm tra đường dẫn bắt đầu bằng /api/v1/auth/
-        if (path.startsWith("/api/v1/auth/")) {
-            return true;
-        }
-        return false;
-    }
-
-    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
