@@ -1,6 +1,7 @@
 package com.example.short_link.sercurity.config;
 
 import com.example.short_link.sercurity.filter.JwtAuthenticationFilter;
+import com.example.short_link.sercurity.oauth.CustomOAuth2SuccessHandler;
 import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
+    private final CustomOAuth2SuccessHandler successHandler;
 
     @Value("${api.prefix}")
     private String apiPrefix;
@@ -47,7 +49,9 @@ public class SecurityConfig {
                                 .requestMatchers("/error").permitAll()
                                 .anyRequest().authenticated()
                         )
-
+                .oauth2Login(oauth -> oauth
+                        .successHandler(successHandler)
+                )
 
                 .userDetailsService(userDetailsService)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

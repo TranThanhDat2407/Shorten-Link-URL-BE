@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.Instant;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -83,5 +84,8 @@ public class JwtService {
                 && !isTokenExpired(token);
     }
 
-
+    // Lấy thời điểm hết hạn refresh token
+    public Instant getRefreshTokenExpiryDate() {
+        return Instant.now().plusMillis(expirationRefreshToken * 1000L);
+    }
 }

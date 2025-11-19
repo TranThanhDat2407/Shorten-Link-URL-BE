@@ -8,10 +8,10 @@ import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
 import com.example.short_link.exception.DataNotFoundException;
 import com.example.short_link.exception.PermissionDenyException;
-import com.example.short_link.exception.UserNotFoundException;
 import com.example.short_link.repository.UserRepository;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.sercurity.user.CustomUserDetailsService;
+import com.example.short_link.service.TokenService;
 import com.example.short_link.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -19,14 +19,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
-    private final UserRepository tokenRepository;
+    private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtService jwtService;
@@ -42,10 +41,8 @@ public class UserServiceImpl implements UserService {
                 throw new PermissionDenyException("Cannot create admin account");
             }
 
-            throw new UserNotFoundException("User already Exists");
+            throw new DataNotFoundException("User already Exists");
         }
-
-
 
         // tìm index của @
         int indexAt = request.getEmail().indexOf('@');
@@ -69,29 +66,40 @@ public class UserServiceImpl implements UserService {
         Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
 
         if(userOptional.isEmpty()){
-            throw new UserNotFoundException("User Not Found");
+            throw new DataNotFoundException("User Not Found");
         }
 
         User existingUser = userOptional.get();
+
+        if (existingUser.getProvider() == AuthProvider.GOOGLE) {
+            throw new RuntimeException("This account was registered via Google. " +
+                    "Use Google Login instead.");
+        }
+
 
         if (!passwordEncoder.matches(request.getPassword(), existingUser.getPassword())) {
             throw new BadCredentialsException("Wrong password");
         }
 
         if (!existingUser.isActive()) {
-            throw new DataNotFoundException("User is locked");
+            throw new BadCredentialsException("User is locked");
         }
 
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(existingUser.getEmail());
 
-        // 1. TẠO ACCESS TOKEN (sử dụng thời gian ngắn)
+        //TẠO ACCESS TOKEN
         String accessToken = jwtService.generateAccessToken(userDetails);
 
-        // 2. TẠO REFRESH TOKEN (sử dụng thời gian dài)
+        //TẠO REFRESH TOKEN
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
+        // Revoke tất cả token cũ (nếu muốn)**
+        tokenService.revokeAllUserTokens(existingUser);
 
-        // 4. TRẢ VỀ CẢ HAI TOKEN
+        // Lưu refresh token mới
+        tokenService.saveUserToken(existingUser, refreshToken, jwtService.getRefreshTokenExpiryDate());
+
+
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -101,7 +109,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("Invalid user"));
+                .orElseThrow(() -> new DataNotFoundException("Invalid user"));
     }
+
+
 
 }
