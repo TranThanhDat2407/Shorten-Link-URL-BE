@@ -55,6 +55,11 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                     return userRepository.save(newUser);
                 });
 
+
+        // Revoke tất cả token cũ (nếu muốn)**
+        tokenService.revokeAllUserTokens(user);
+        tokenService.deleteAllByUser(user);
+
         // 3. Generate token
         String accessToken = jwtService.generateAccessToken(
                 new CustomUserDetails(user)
@@ -67,7 +72,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         // Lưu Refresh Token
         tokenService.saveUserToken(user, refreshToken, jwtService.getRefreshTokenExpiryDate());
 
-        long refreshTokenValiditySeconds = 604800L;
+        long refreshTokenValiditySeconds = 604800L; // thời gian tồn tại của cookie
         Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
         refreshCookie.setHttpOnly(true);
         refreshCookie.setSecure(true); // CHỈ DÙNG TRONG MÔI TRƯỜNG PRODUCTION (HTTPS)
@@ -78,8 +83,6 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         response.sendRedirect(
                 frontendDomain + "/oauth-success"
-                // Nếu bạn muốn truyền AT, hãy cân nhắc dùng cookie hoặc lưu tạm thời.
-                // + "?access=" + accessToken
         );
     }
 }

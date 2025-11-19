@@ -11,6 +11,7 @@ import com.example.short_link.entity.User;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register (
-            @RequestBody RegisterRequest request){
+            @Valid @RequestBody RegisterRequest request){
         User user = userService.register(request);
         RegisterResponse response = RegisterResponse.builder()
                 .message("Create user " + user.getEmail() + " successfully")

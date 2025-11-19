@@ -14,4 +14,6 @@ public interface TokenService {
     Optional<Token> findByToken(String token);
 
     String refreshAccessToken(String refreshToken);
+
+    void deleteAllByUser(User user);
 }

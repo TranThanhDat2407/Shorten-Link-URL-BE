@@ -6,6 +6,7 @@ import com.example.short_link.enums.TokenType;
 import com.example.short_link.repository.TokenRepository;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.service.TokenService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -85,5 +86,11 @@ public class TokenServiceImpl implements TokenService {
 
         // Sinh Access Token mới
         return jwtService.generateAccessToken(userDetails);
+    }
+
+    @Transactional
+    @Override
+    public void deleteAllByUser(User user) {
+        tokenRepository.deleteAllByUser(user);
     }
 }

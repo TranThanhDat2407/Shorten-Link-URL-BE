@@ -32,5 +32,6 @@ public class Token extends BaseEntityWIthUpdate{
     private Instant expiredAt;
 
     @ManyToOne
+    @JoinColumn(name = "user_id")
     private User user;
 }

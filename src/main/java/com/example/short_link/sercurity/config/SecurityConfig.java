@@ -3,6 +3,7 @@ package com.example.short_link.sercurity.config;
 import com.example.short_link.sercurity.filter.JwtAuthenticationFilter;
 import com.example.short_link.sercurity.oauth.CustomOAuth2SuccessHandler;
 import com.example.short_link.sercurity.user.CustomUserDetailsService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -32,8 +33,6 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
 
-//                .sessionManagement(session
-//                        -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(request -> request
                                 .requestMatchers(
@@ -49,6 +48,18 @@ public class SecurityConfig {
                                 .requestMatchers("/error").permitAll()
                                 .anyRequest().authenticated()
                         )
+                //chặn api không có token sang oauth2
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((
+                                request,
+                                response,
+                                authException) -> {
+                            response.sendError(
+                                    HttpServletResponse.SC_UNAUTHORIZED,
+                                    "Unauthorized: Authentication required."
+                            );
+                        })
+                )
                 .oauth2Login(oauth -> oauth
                         .successHandler(successHandler)
                 )

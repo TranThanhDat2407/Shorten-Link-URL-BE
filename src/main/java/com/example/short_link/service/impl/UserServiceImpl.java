@@ -94,7 +94,8 @@ public class UserServiceImpl implements UserService {
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
         // Revoke tất cả token cũ (nếu muốn)**
-        tokenService.revokeAllUserTokens(existingUser);
+//        tokenService.revokeAllUserTokens(existingUser);
+        tokenService.deleteAllByUser(existingUser);
 
         // Lưu refresh token mới
         tokenService.saveUserToken(existingUser, refreshToken, jwtService.getRefreshTokenExpiryDate());
