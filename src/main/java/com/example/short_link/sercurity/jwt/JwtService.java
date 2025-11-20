@@ -29,7 +29,7 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
-                // Sử dụng expiration (thời gian ngắn)
+                // thời điểm hiện tại + thời gian sống = thời điểm hết han
                 .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000L))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
@@ -39,7 +39,7 @@ public class JwtService {
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
-                // Sử dụng expirationRefreshToken (thời gian dài)
+                // thời điểm hiện tại + thời gian sống = thời điểm hết han
                 .setExpiration(new Date(System.currentTimeMillis() + expirationRefreshToken * 1000L))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
@@ -48,7 +48,6 @@ public class JwtService {
     private Key getSignKey() {
         //Giải mã secretKey từ Base64 bằng Decoders.BASE64.decode().
         byte[] bytes = Decoders.BASE64.decode(secretKey);
-        //Keys.hmacShaKeyFor(Decoders.BASE64.decode("TaqlmGv1iEDMRiFp/pHuID1+T84IABfuA0xXh4GhiUI="));
 
         //Tạo một đối tượng Key sử dụng Keys.hmacShaKeyFor().
         return Keys.hmacShaKeyFor(bytes);

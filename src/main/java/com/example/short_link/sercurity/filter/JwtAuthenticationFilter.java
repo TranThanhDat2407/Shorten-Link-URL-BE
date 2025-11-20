@@ -1,11 +1,12 @@
 package com.example.short_link.sercurity.filter;
 
 import com.example.short_link.sercurity.jwt.JwtService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
@@ -37,32 +38,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         //Trường hợp chưa đăng nhập nên chưa có token:
         // header không có token bỏ qua;
-        if(authHeader == null || !authHeader.startsWith("Bearer ")){
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         // Trường hợp sau khi đăng nhập và User đã có token
         // lấy token
-        jwt = authHeader.substring(7); // bỏ Bearer + dấu cách 7 kí tự
-        username = jwtService.extractEmail(jwt); // lấy subject trong jwt để lấy email
+        jwt = authHeader.substring(7);// bỏ Bearer + dấu cách 7 kí tự
+        try {
+            username = jwtService.extractEmail(jwt); // lấy subject trong jwt để lấy email
 
-        //tìm thấy user và lưu tất cả principal + authorities vào trong SercurityContextHolder
-        if(username != null && SecurityContextHolder.getContext().getAuthentication() == null){
-            UserDetails user = userDetailsService.loadUserByUsername(username);
+            //tìm thấy user và lưu tất cả principal + authorities vào trong SercurityContextHolder
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails user = userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.isValidateToken(jwt, user)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                if (jwtService.isValidateToken(jwt, user)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
 
-                // lưu những thứ như IP của người Request
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    // lưu những thứ như IP của người Request
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                //lưu principal + authorities
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    //lưu principal + authorities
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (ExpiredJwtException ex) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"ACCESS_TOKEN_EXPIRED\"}");
+        }
     }
 }

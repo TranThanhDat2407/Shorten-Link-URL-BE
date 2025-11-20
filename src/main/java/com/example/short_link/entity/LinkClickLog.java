@@ -22,6 +22,9 @@ public class LinkClickLog extends BaseEntity{
     @Column(name = "country")
     private String country;
 
+    @Column(name = "city")
+    private String city;
+
     @Column(name = "device")
     private String device;
 

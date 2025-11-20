@@ -59,14 +59,11 @@ public class AuthController {
         return ResponseEntity.ok(accessTokenResponse);
     }
 
-    @PostMapping("/test")
-    public ResponseEntity<?> test (
-            @RequestBody RegisterRequest request){
-        RegisterResponse response = RegisterResponse.builder()
-                .message("Test successfully")
-                .build();
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(){
 
-        return ResponseEntity.ok(response);
+
+        return ResponseEntity.ok("ok");
     }
 
 }

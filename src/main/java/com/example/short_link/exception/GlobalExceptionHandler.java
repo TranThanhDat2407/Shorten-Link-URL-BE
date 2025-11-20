@@ -19,6 +19,13 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), "DATA_NOT_FOUND");
     }
 
+    @ExceptionHandler(AccessTokenExpiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessTokenExpiredExceptions(Exception ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Access_Token_Expired");
+    }
+
+
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
 
@@ -46,7 +53,10 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), "SERVER_ERROR");
     }
 
-    private ResponseEntity<ApiErrorResponse> buildError(HttpStatus status, String message, String errorCode) {
+    private ResponseEntity<ApiErrorResponse> buildError(
+            HttpStatus status,
+            String message,
+            String errorCode) {
         ApiErrorResponse error = ApiErrorResponse.builder()
                 .status(status.value())
                 .message(message)

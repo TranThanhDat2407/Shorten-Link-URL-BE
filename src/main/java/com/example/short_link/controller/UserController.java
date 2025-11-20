@@ -3,6 +3,7 @@ package com.example.short_link.controller;
 import com.example.short_link.dto.request.RegisterRequest;
 import com.example.short_link.dto.response.RegisterResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +23,6 @@ public class UserController {
                 .message("Test successfully")
                 .build();
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
