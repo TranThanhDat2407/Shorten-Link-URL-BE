@@ -41,4 +41,6 @@ public class User extends BaseEntityWIthUpdate {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Link> links = new ArrayList<>();
 
+
+
 }

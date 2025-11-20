@@ -67,7 +67,7 @@ public class SecurityConfig {
                         .successHandler(successHandler)
                 )
 
-                .userDetailsService(userDetailsService)
+//                .userDetailsService(userDetailsService)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
 

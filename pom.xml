@@ -94,6 +94,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+
+        <!-->geolocation by ip <-->
+        <dependency>
+            <groupId>com.maxmind.geoip2</groupId>
+            <artifactId>geoip2</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>

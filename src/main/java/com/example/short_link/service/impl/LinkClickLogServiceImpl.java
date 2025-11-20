@@ -4,6 +4,10 @@ import com.example.short_link.entity.Link;
 import com.example.short_link.entity.LinkClickLog;
 import com.example.short_link.repository.LinkClickLogRepository;
 import com.example.short_link.service.LinkClickLogService;
+import com.example.short_link.util.GeoInfo;
+import com.example.short_link.util.IpGeolocationUtil;
+import com.example.short_link.util.UserAgentParsingUtil;
+import com.maxmind.geoip2.DatabaseReader;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,7 +17,12 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class LinkClickLogServiceImpl implements LinkClickLogService {
+
     private final LinkClickLogRepository linkClickLogRepository;
+
+    private final UserAgentParsingUtil userAgentParsingUtil;
+    private final IpGeolocationUtil ipGeolocationUtil;
+
 
     @Override
     public void logClickDetails(Link link, HttpServletRequest request) {
@@ -21,16 +30,15 @@ public class LinkClickLogServiceImpl implements LinkClickLogService {
         String ipAddress = request.getRemoteAddr();
 
 
-        String device = getDeviceFromUserAgent(userAgent);
-        String browser = getBrowserFromUserAgent(userAgent);
-        String country = getCountryFromIp(ipAddress);
-        String city = getCityFromIp(ipAddress);
+        String device = userAgentParsingUtil.getDevice(userAgent);
+        String browser = userAgentParsingUtil.getBrowser(userAgent);
+
+        GeoInfo geoInfo = ipGeolocationUtil.lookup(ipAddress);
 
         LinkClickLog log =  LinkClickLog.builder()
                 .clicked_at(Instant.now())
                 .ip(ipAddress)
-                .country(country)
-                .city(city)
+                .country(geoInfo.getCountry())
                 .browser(browser)
                 .device(device)
                 .link(link)
@@ -40,26 +48,4 @@ public class LinkClickLogServiceImpl implements LinkClickLogService {
     }
 
 
-    private String getDeviceFromUserAgent(String userAgent) {
-        if (userAgent == null) return "Unknown";
-        if (userAgent.toLowerCase().contains("mobile")) return "Mobile";
-        return "Desktop";
-    }
-
-    private String getBrowserFromUserAgent(String userAgent) {
-        if (userAgent == null) return "Unknown";
-        if (userAgent.contains("Chrome") && !userAgent.contains("Edg")) return "Chrome";
-        if (userAgent.contains("Safari") && !userAgent.contains("Chrome")) return "Safari";
-        return "Other";
-    }
-
-    private String getCountryFromIp(String ipAddress) {
-
-        return "Vietnam";
-    }
-
-    private String getCityFromIp(String ipAddress) {
-
-        return "HoChiMinh";
-    }
 }

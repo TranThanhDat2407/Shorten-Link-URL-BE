@@ -21,6 +21,7 @@ public class Base62Converter {
         for (int i = 0; i < code.length(); i++) {
             id = id * 62 + BASE62.indexOf(code.charAt(i));
         }
+
         return id;
     }
 }
