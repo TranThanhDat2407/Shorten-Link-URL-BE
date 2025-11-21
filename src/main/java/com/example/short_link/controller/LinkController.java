@@ -1,11 +1,13 @@
 package com.example.short_link.controller;
 
 import com.example.short_link.dto.request.CreateShortCodeRequest;
+import com.example.short_link.dto.request.LinkSearchRequest;
 import com.example.short_link.dto.response.CreateShortCodeResponse;
 import com.example.short_link.dto.response.LinkResponse;
 import com.example.short_link.entity.Link;
 import com.example.short_link.service.LinkClickLogService;
 import com.example.short_link.service.LinkService;
+import com.example.short_link.util.AuthenticationUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -25,6 +28,7 @@ import java.net.URI;
 public class LinkController {
     private final LinkService linkService;
     private final LinkClickLogService linkClickLogService;
+    private final AuthenticationUtil authenticationUtil;
 
     @Value("${spring.application.frontend-domain}")
     private String frontEndDomain;
@@ -63,17 +67,35 @@ public class LinkController {
                 .build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<Page<LinkResponse>> getAllLinks(
+            @ModelAttribute LinkSearchRequest request,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable){
-        Page<Link> result = linkService.getAllLinks(pageable);
+        Page<Link> result = linkService.getAllLinks(request, pageable);
 
         Page<LinkResponse> responses = result.map(
                 link -> LinkResponse.fromEntity(link)
         );
 
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/my-links")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Page<LinkResponse>> getMyLinks(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+
+        String currentUserId = String.valueOf(authenticationUtil.getCurrentAuthenticatedUser().getId());
+
+        LinkSearchRequest request = new LinkSearchRequest();
+        request.setUserId(currentUserId);
+
+        Page<Link> page = linkService.getAllLinks(request, pageable);
+        return ResponseEntity.ok(page.map(LinkResponse::fromEntity));
     }
 
 }

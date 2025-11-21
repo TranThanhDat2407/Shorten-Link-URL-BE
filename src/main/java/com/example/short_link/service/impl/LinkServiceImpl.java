@@ -1,5 +1,6 @@
 package com.example.short_link.service.impl;
 
+import com.example.short_link.dto.request.LinkSearchRequest;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.User;
 import com.example.short_link.repository.LinkRepository;
@@ -25,7 +26,7 @@ public class LinkServiceImpl implements LinkService {
     @Override
     public Link CreateShortLink(String originalUrl) {
         User user = authenticationUtil.getCurrentAuthenticatedUser();
-        
+
         Link link = Link.builder()
                 .originalUrl(originalUrl)
                 .clickCount(0L)
@@ -67,15 +68,24 @@ public class LinkServiceImpl implements LinkService {
     }
 
     @Override
-    public Page<Link> getAllLinks(Pageable pageable) {
-        return shortLinkRepository.findAll(pageable);
-    }
-
-    @Override
-    public Page<Link> getAllLinksByUserId(Long userId, Pageable pageable) {
+    public Page<Link> getAllLinks(LinkSearchRequest request, Pageable pageable) {
         Specification<Link> spec = Specification.unrestricted();
 
-        if(userId != null) spec = spec.and(LinkSpecification.hasOwner(userId));
+        Long userIdFilter = request.getUserIdAsLong();
+        if (request.getUserId() != null) {
+            // Param userId có mặt trong query string (dù là "null", "abc", "0", v.v.)
+            if (userIdFilter == null || userIdFilter <= 0) {
+                // "null", rỗng, 0, -1, hoặc chuỗi rác → chỉ lấy link guest
+                spec = spec.and(LinkSpecification.hasOwner(null));
+            } else {
+                // Là số hợp lệ > 0 → filter theo user
+                spec = spec.and(LinkSpecification.hasOwner(userIdFilter));
+            }
+        }
+
+        spec = spec.and(LinkSpecification.containsShortCode(request.getShortCode()));
+        spec = spec.and(LinkSpecification.containsOriginalUrl(request.getOriginalUrl()));
+
 
         return shortLinkRepository.findAll(spec, pageable);
     }

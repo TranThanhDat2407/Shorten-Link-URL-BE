@@ -47,19 +47,5 @@ public class UserController {
     }
 
 
-    @GetMapping("{userId}/links")
-    public ResponseEntity<Page<LinkResponse>> getAllLinksByUser(
-            @PathVariable Long userId,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable){
-
-        Page<Link> result = linkService.getAllLinksByUserId(userId, pageable);
-
-        Page<LinkResponse> responses = result.map(
-                link -> LinkResponse.fromEntity(link)
-        );
-
-        return ResponseEntity.ok(responses);
-    }
 
     }
