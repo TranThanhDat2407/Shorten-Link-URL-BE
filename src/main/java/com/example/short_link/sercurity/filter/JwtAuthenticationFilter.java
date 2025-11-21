@@ -56,6 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtService.isValidateToken(jwt, user)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    log.info(">>> role : {}", user.getAuthorities());
 
                     // lưu những thứ như IP của người Request
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

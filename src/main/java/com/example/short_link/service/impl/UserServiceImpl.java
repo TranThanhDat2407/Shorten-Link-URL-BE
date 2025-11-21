@@ -2,6 +2,7 @@ package com.example.short_link.service.impl;
 
 import com.example.short_link.dto.request.LoginRequest;
 import com.example.short_link.dto.request.RegisterRequest;
+import com.example.short_link.dto.request.UserSearchRequest;
 import com.example.short_link.dto.response.AuthResponse;
 import com.example.short_link.entity.User;
 import com.example.short_link.enums.AuthProvider;
@@ -9,15 +10,21 @@ import com.example.short_link.enums.Role;
 import com.example.short_link.exception.DataNotFoundException;
 import com.example.short_link.exception.PermissionDenyException;
 import com.example.short_link.repository.UserRepository;
+import com.example.short_link.repository.spec.UserSpecification;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 
 import java.util.Optional;
 
@@ -113,6 +120,29 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new DataNotFoundException("Invalid user"));
     }
 
+
+    @Override
+    public Page<User> searchUsers(UserSearchRequest request, Pageable pageable) {
+        Specification<User> spec = Specification.unrestricted();
+
+        if(request.getEmail() != null){
+            spec = spec.and(UserSpecification.containsEmail(request.getEmail()));
+        }
+
+        if(request.getFullName() != null){
+            spec = spec.and(UserSpecification.containsFullName(request.getFullName()));
+        }
+
+        if(request.getProvider() != null){
+            spec = spec.and(UserSpecification.hasProvider(request.getProvider()));
+        }
+
+        if(request.getIsActive() != null){
+            spec = spec.and(UserSpecification.isActive(request.getIsActive()));
+        }
+
+        return userRepository.findAll(spec, pageable);
+    }
 
 
 }
