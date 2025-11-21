@@ -9,4 +9,5 @@ public class UserSearchRequest {
     String fullName;
     Boolean isActive;
     AuthProvider provider;
+    Long totalLink;
 }

@@ -4,6 +4,7 @@ import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,6 @@ public class User extends BaseEntityWIthUpdate {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Link> links = new ArrayList<>();
-
 
 
 }

@@ -3,10 +3,14 @@ package com.example.short_link.service.impl;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.User;
 import com.example.short_link.repository.LinkRepository;
+import com.example.short_link.repository.spec.LinkSpecification;
 import com.example.short_link.service.LinkService;
 import com.example.short_link.util.AuthenticationUtil;
 import com.example.short_link.util.Base62Converter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,5 +59,24 @@ public class LinkServiceImpl implements LinkService {
         shortLinkRepository.save(link);
 
         return link;
+    }
+
+    @Override
+    public Long totalCountByUserId(Long userId) {
+        return shortLinkRepository.countByUserId(userId);
+    }
+
+    @Override
+    public Page<Link> getAllLinks(Pageable pageable) {
+        return shortLinkRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<Link> getAllLinksByUserId(Long userId, Pageable pageable) {
+        Specification<Link> spec = Specification.unrestricted();
+
+        if(userId != null) spec = spec.and(LinkSpecification.hasOwner(userId));
+
+        return shortLinkRepository.findAll(spec, pageable);
     }
 }

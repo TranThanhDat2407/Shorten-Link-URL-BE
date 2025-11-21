@@ -14,8 +14,9 @@ public class UserResponse {
     private String pictureUrl;
     private Boolean isActive;
     private Role role;
+    private Long totalLink;
 
-    public static UserResponse fromEntity(User user) {
+    public static UserResponse fromEntity(User user, Long totalLink) {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -23,6 +24,7 @@ public class UserResponse {
                 .pictureUrl(user.getPictureUrl())
                 .isActive(user.isActive())
                 .role(user.getRole())
+                .totalLink(totalLink)
                 .build();
     }
 }

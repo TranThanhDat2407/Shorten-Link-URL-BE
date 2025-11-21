@@ -5,13 +5,13 @@ import org.springframework.data.jpa.domain.Specification;
 
 public class LinkSpecification {
     // lấy tất cả link theo email user
-    public static Specification<Link> hasOwner(String email) {
+    public static Specification<Link> hasOwner(Long userId) {
         return (root, query, cb) -> {
-            if (email == null || email.trim().isEmpty()) {
+            if (userId == null ) {
                 return cb.isTrue(cb.literal(true)); // Không lọc
             }
 
-            return cb.equal(root.get("user").get("email"), email);
+            return cb.equal(root.get("user").get("id"), userId);
         };
     }
 }

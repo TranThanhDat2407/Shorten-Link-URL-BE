@@ -1,11 +1,16 @@
 package com.example.short_link.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 
+@Getter
 @MappedSuperclass
+@Setter
 public abstract class BaseEntityWIthUpdate extends BaseEntity {
+
     @Column(nullable = false)
     private Instant updatedAt;
 
@@ -18,11 +23,6 @@ public abstract class BaseEntityWIthUpdate extends BaseEntity {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = Instant.now();
-    }
-
-    // getter
-    public Instant getUpdatedAt() {
-        return updatedAt;
     }
 
 }
