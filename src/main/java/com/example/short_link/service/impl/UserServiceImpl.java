@@ -1,5 +1,6 @@
 package com.example.short_link.service.impl;
 
+import com.example.short_link.dto.request.ChangePasswordRequest;
 import com.example.short_link.dto.request.LoginRequest;
 import com.example.short_link.dto.request.RegisterRequest;
 import com.example.short_link.dto.request.UserSearchRequest;
@@ -8,12 +9,14 @@ import com.example.short_link.entity.User;
 import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
 import com.example.short_link.exception.DataNotFoundException;
+import com.example.short_link.exception.PermissionDenyException;
 import com.example.short_link.repository.UserRepository;
 import com.example.short_link.repository.spec.UserSpecification;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.service.UserService;
+import com.example.short_link.util.AuthenticationUtil;
 import com.example.short_link.util.RedisService;
 import com.example.short_link.util.UserAgentParsingUtil;
 import jakarta.servlet.http.Cookie;
@@ -24,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,6 +49,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtService jwtService;
+    private final AuthenticationUtil authenticationUtil;
 
     @Override
     public User register(RegisterRequest request) {
@@ -126,6 +131,8 @@ public class UserServiceImpl implements UserService {
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .fullName(existingUser.getFullName())
+                .role(existingUser.getRole().toString())
                 .build();
     }
 
@@ -192,6 +199,37 @@ public class UserServiceImpl implements UserService {
         response.addCookie(cookie);
 
         // Optional: Clear SecurityContext (dù stateless nhưng vẫn nên)
+        SecurityContextHolder.clearContext();
+    }
+
+    @Transactional
+    @Override
+    public void changePassword(ChangePasswordRequest request) {
+        //Lấy thông tin người dùng hiện tại từ Security Context
+        User currentUser = authenticationUtil.getCurrentAuthenticatedUser();
+
+        User user = userRepository.findByEmail(currentUser.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found in security context"));
+
+        // Xác thực Mật khẩu Cũ
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BadCredentialsException("Old password not match");
+        }
+
+        //Xác thực Mật khẩu Mới
+        if (!request.getNewPassword().equals(request.getConfirmationPassword())) {
+            throw new BadCredentialsException("Passwords not match");
+        }
+
+        //Mã hóa và Lưu Mật khẩu Mới
+        String newHashedPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(newHashedPassword);
+        userRepository.save(user);
+
+        // Thu hồi TẤT CẢ các Refresh Token cũ của người dùng.
+        tokenService.revokeAllUserRefreshTokens(user);
+
+        // Xóa khỏi SecurityContextHolder
         SecurityContextHolder.clearContext();
     }
 }

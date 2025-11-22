@@ -1,9 +1,6 @@
 package com.example.short_link.controller;
 
-import com.example.short_link.dto.request.LoginRequest;
-import com.example.short_link.dto.request.LogoutRequest;
-import com.example.short_link.dto.request.RegisterRequest;
-import com.example.short_link.dto.request.TokenRefreshRequest;
+import com.example.short_link.dto.request.*;
 import com.example.short_link.dto.response.AccessTokenResponse;
 import com.example.short_link.dto.response.AuthResponse;
 import com.example.short_link.dto.response.LogoutResponse;
@@ -95,4 +92,10 @@ public class AuthController {
                 .build());
     }
 
+    @PostMapping("/changePassword")
+    public ResponseEntity<?> changePassword(
+            @RequestBody ChangePasswordRequest request){
+        userService.changePassword(request);
+        return ResponseEntity.ok("ok");
+    }
 }

@@ -91,10 +91,8 @@ public class JwtService {
     }
 
     private static final Logger log = LoggerFactory.getLogger(JwtService.class);
-    /**
-     * Lấy thời gian còn lại của Access Token (tính bằng giây)
-     * Dùng để set TTL chính xác trong Redis khi blacklist
-     */
+
+   // lấy thời gian sống để đưa vào redis
     public long getAccessTokenRemainingSeconds(String accessToken) {
         try {
             Date expiration = extractClaim(accessToken, Claims::getExpiration);
@@ -107,10 +105,7 @@ public class JwtService {
         }
     }
 
-    /**
-     * Lấy thời gian còn lại của Refresh Token (tính bằng giây)
-     * Dùng để blacklist refresh token chính xác TTL
-     */
+    // lấy thời gian sống để đưa vào redis
     public long getRefreshTokenRemainingSeconds(String refreshToken) {
         try {
             Date expiration = extractClaim(refreshToken, Claims::getExpiration);

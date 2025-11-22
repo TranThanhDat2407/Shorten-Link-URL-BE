@@ -31,6 +31,10 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Access_Token_Expired");
     }
 
+    @ExceptionHandler(PermissionDenyException.class)
+    public ResponseEntity<ApiErrorResponse> handlePermissionDenyExceptions(Exception ex) {
+        return buildError(HttpStatus.FORBIDDEN, ex.getMessage(), "Permission_Deny");
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {

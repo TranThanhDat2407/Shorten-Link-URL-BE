@@ -1,5 +1,6 @@
 package com.example.short_link.service;
 
+import com.example.short_link.dto.request.ChangePasswordRequest;
 import com.example.short_link.dto.request.LoginRequest;
 import com.example.short_link.dto.request.RegisterRequest;
 import com.example.short_link.dto.request.UserSearchRequest;
@@ -9,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface UserService {
     User register(RegisterRequest request);
@@ -20,4 +22,7 @@ public interface UserService {
     User findByEmail(String email);
 
     Page<User> searchUsers(UserSearchRequest request, Pageable pageable);
+
+    @Transactional
+    void changePassword(ChangePasswordRequest request);
 }
