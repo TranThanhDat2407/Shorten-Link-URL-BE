@@ -3,6 +3,8 @@ package com.example.short_link.exception;
 import com.example.short_link.dto.response.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -16,7 +18,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleDataNotFoundExceptions(Exception ex) {
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), "DATA_NOT_FOUND");
+        return buildError(HttpStatus.FORBIDDEN, ex.getMessage(), "DATA_NOT_FOUND");
     }
 
     @ExceptionHandler(RefreshTokenRevokedException.class)
@@ -28,7 +30,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleAccessTokenExpiredExceptions(Exception ex) {
         return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Access_Token_Expired");
     }
-
 
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -57,6 +58,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleOtherExceptions(Exception ex) {
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), "SERVER_ERROR");
     }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        return buildError(
+                HttpStatus.FORBIDDEN,
+                "You do not have permission to access this resource",
+                "FORBIDDEN"
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthentication(AuthenticationException ex) {
+        return buildError(
+                HttpStatus.UNAUTHORIZED,
+                "Authentication required or token invalid",
+                "UNAUTHORIZED"
+        );
+    }
+
+
 
     private ResponseEntity<ApiErrorResponse> buildError(
             HttpStatus status,

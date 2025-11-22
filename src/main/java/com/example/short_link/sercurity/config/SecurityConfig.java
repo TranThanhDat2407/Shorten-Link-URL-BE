@@ -49,6 +49,17 @@ public class SecurityConfig {
                                         "/oauth2/**",
                                         "/login/**"
                                 ).permitAll()
+                                //permit open api/ swagger
+                                .requestMatchers(
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html",
+                                        "/v3/api-docs/**",
+                                        "/v3/api-docs.yaml",
+                                        "/swagger-resources/**",
+                                        "/webjars/**",
+                                        "/configuration/ui",
+                                        "/configuration/security"
+                                ).permitAll()
                         //permit etc
                                 .requestMatchers(HttpMethod.POST
                                         ,String.format("%s/short-link/**", apiPrefix)).permitAll()

@@ -8,7 +8,6 @@ import com.example.short_link.entity.User;
 import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
 import com.example.short_link.exception.DataNotFoundException;
-import com.example.short_link.exception.PermissionDenyException;
 import com.example.short_link.repository.UserRepository;
 import com.example.short_link.repository.spec.UserSpecification;
 import com.example.short_link.sercurity.jwt.JwtService;
