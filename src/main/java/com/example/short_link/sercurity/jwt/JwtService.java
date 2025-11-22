@@ -5,6 +5,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -84,7 +86,40 @@ public class JwtService {
     }
 
     // Lấy thời điểm hết hạn refresh token
-    public Instant getRefreshTokenExpiryDate() {
+    public Instant getRefreshTokenExpirationInstant() {
         return Instant.now().plusMillis(expirationRefreshToken * 1000L);
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
+    /**
+     * Lấy thời gian còn lại của Access Token (tính bằng giây)
+     * Dùng để set TTL chính xác trong Redis khi blacklist
+     */
+    public long getAccessTokenRemainingSeconds(String accessToken) {
+        try {
+            Date expiration = extractClaim(accessToken, Claims::getExpiration);
+            long expirationMillis = expiration.getTime();
+            long nowMillis = System.currentTimeMillis();
+            return Math.max(0, (expirationMillis - nowMillis) / 1000); // trả về giây, không âm
+        } catch (Exception e) {
+            log.warn("Cannot parse access token for blacklist calculation: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Lấy thời gian còn lại của Refresh Token (tính bằng giây)
+     * Dùng để blacklist refresh token chính xác TTL
+     */
+    public long getRefreshTokenRemainingSeconds(String refreshToken) {
+        try {
+            Date expiration = extractClaim(refreshToken, Claims::getExpiration);
+            long expirationMillis = expiration.getTime();
+            long nowMillis = System.currentTimeMillis();
+            return Math.max(0, (expirationMillis - nowMillis) / 1000);
+        } catch (Exception e) {
+            log.warn("Cannot parse refresh token for blacklist calculation: {}", e.getMessage());
+            return 0;
+        }
     }
 }

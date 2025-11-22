@@ -6,7 +6,9 @@ import com.example.short_link.enums.Role;
 import com.example.short_link.repository.UserRepository;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.sercurity.user.CustomUserDetails;
+import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import com.example.short_link.service.TokenService;
+import com.example.short_link.util.UserAgentParsingUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,11 +16,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +31,8 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final TokenService tokenService;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final UserAgentParsingUtil userAgentUtil;
 
     @Value("${spring.application.frontend-domain}")
     private String frontEndDomain;
@@ -36,7 +43,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             HttpServletResponse response,
             Authentication authentication) throws IOException {
 
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+        OidcUser oAuth2User = (OidcUser) authentication.getPrincipal();
 
         String email = oAuth2User.getAttribute("email");
         String name  = oAuth2User.getAttribute("name");
@@ -57,22 +64,27 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                     return userRepository.save(newUser);
                 });
 
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(user.getEmail());
 
-        // Revoke tất cả token cũ (nếu muốn)**
-        tokenService.revokeAllUserTokens(user);
-        tokenService.deleteAllByUser(user);
+        //TẠO ACCESS TOKEN
+        String accessToken = jwtService.generateAccessToken(userDetails);
 
-        // 3. Generate token
-        String accessToken = jwtService.generateAccessToken(
-                new CustomUserDetails(user)
-        );
+        // 6. Tạo refresh token mới
+        String refreshToken = jwtService.generateRefreshToken(userDetails);
 
-        String refreshToken = jwtService.generateRefreshToken(
-                new CustomUserDetails(user)
-        );
+        Instant expiresAt = jwtService.getRefreshTokenExpirationInstant();
+
+        String userAgentHeader = request.getHeader("User-Agent");
+        String deviceName = userAgentUtil.getDevice(userAgentHeader)
+                + " • " + userAgentUtil.getBrowser(userAgentHeader);
+        String ipAddress = request.getRemoteAddr();
+
+
+        //giới hạn token mỗi device
+        tokenService.limitTokensPerDevice(user, deviceName, 2);
 
         // Lưu Refresh Token
-        tokenService.saveUserToken(user, refreshToken, jwtService.getRefreshTokenExpiryDate());
+        tokenService.saveUserToken(user, refreshToken, expiresAt, deviceName, ipAddress);
 
         long refreshTokenValiditySeconds = 604800L; // thời gian tồn tại của cookie
         Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
@@ -83,8 +95,14 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         response.addCookie(refreshCookie);
 
-        response.sendRedirect(
-                frontEndDomain + "/oauth-success"
+        // 6. Gửi access token luôn cho client (JSON)
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        String json = String.format(
+                "{\"accessToken\":\"%s\",\"refreshToken\":\"%s\"}",
+                accessToken, refreshToken
         );
+        response.getWriter().write(json);
+        response.getWriter().flush();
     }
 }

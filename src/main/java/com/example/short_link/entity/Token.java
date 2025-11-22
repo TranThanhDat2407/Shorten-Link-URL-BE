@@ -22,11 +22,17 @@ public class Token extends BaseEntityWIthUpdate{
     @Column(name = "token", columnDefinition = "TEXT", nullable = false)
     private String token;
 
+    @Column(name = "device_name")
+    private String deviceName;
+
+    @Column(name = "ip_address")
+    private String ipAddress;
+
     @Column(name = "revoked")
     private Boolean revoked;
 
-    @Column(name = "expired")
-    private Boolean expired;
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
 
     @Column(name = "expired_at")
     private Instant expiredAt;

@@ -19,6 +19,11 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), "DATA_NOT_FOUND");
     }
 
+    @ExceptionHandler(RefreshTokenRevokedException.class)
+    public ResponseEntity<ApiErrorResponse> handleRefreshTokenRevokedExceptions(Exception ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Refresh_Token_Expired");
+    }
+
     @ExceptionHandler(AccessTokenExpiredException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessTokenExpiredExceptions(Exception ex) {
         return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Access_Token_Expired");

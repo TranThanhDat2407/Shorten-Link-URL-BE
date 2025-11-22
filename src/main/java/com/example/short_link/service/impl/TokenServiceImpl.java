@@ -3,11 +3,14 @@ package com.example.short_link.service.impl;
 import com.example.short_link.entity.Token;
 import com.example.short_link.entity.User;
 import com.example.short_link.enums.TokenType;
+import com.example.short_link.exception.RefreshTokenRevokedException;
 import com.example.short_link.repository.TokenRepository;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.service.TokenService;
+import com.example.short_link.util.RedisService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -21,31 +24,41 @@ import java.util.Optional;
 public class TokenServiceImpl implements TokenService {
     private final TokenRepository tokenRepository;
     private final UserDetailsService userDetailsService;
+    private final RedisService redisService;
     private final JwtService jwtService;
 
     @Override
-    public void saveUserToken(User user, String refreshToken, Instant expiresAt) {
+    public void saveUserToken(User user, String refreshToken,
+                              Instant expiresAt, String deviceName, String ipAddress) {
         Token token = Token.builder()
                 .token(refreshToken)
                 .user(user)
-                .tokenType(TokenType.REFRESH)
+                .tokenType(TokenType.REFRESH)  // Có thể bỏ nếu bảng chỉ lưu refresh token
                 .revoked(false)
-                .expired(false)
+                .deviceName(deviceName)
+                .ipAddress(ipAddress)
                 .expiredAt(expiresAt)
                 .build();
 
         tokenRepository.save(token);
     }
 
+    @Transactional
     @Override
     public void revokeAllUserTokens(User user) {
-        List<Token> validTokens = tokenRepository.findAllByUserAndRevokedFalseAndExpiredFalse(user);
-        if (!validTokens.isEmpty()) {
-            validTokens.forEach(t -> {
-                t.setRevoked(true);
-                t.setExpired(true);
+        // Set revoked = true cho tất cả token chưa bị revoked
+        List<Token> activeTokens = tokenRepository.findAllByUserAndRevokedFalse(user);
+        if (!activeTokens.isEmpty()) {
+            activeTokens.forEach(t -> t.setRevoked(true));
+            tokenRepository.saveAll(activeTokens);
+
+            // Đồng thời đưa vào Redis blacklist
+            activeTokens.forEach(t -> {
+                long ttl = jwtService.getRefreshTokenRemainingSeconds(t.getToken());
+                if (ttl > 0) {
+                    redisService.blacklistRefreshToken(t.getToken(), ttl);
+                }
             });
-            tokenRepository.saveAll(validTokens);
         }
     }
 
@@ -56,41 +69,90 @@ public class TokenServiceImpl implements TokenService {
 
     @Override
     public String refreshAccessToken(String refreshToken) {
-        // Tìm refresh token trong DB
-        Optional<Token> storedTokenOpt = tokenRepository.findByToken(refreshToken);
-
-        if (storedTokenOpt.isEmpty()
-                || storedTokenOpt.get().getRevoked()
-                || storedTokenOpt.get().getExpired()) {
-            throw new RuntimeException("Refresh token is invalid or expired.");
+        // 1. Check Redis blacklist
+        if (redisService.isRefreshTokenBlacklisted(refreshToken)) {
+            throw new RefreshTokenRevokedException("Refresh token has been revoked. Please login again.");
         }
 
-         Token storedToken = storedTokenOpt.get();
+        // 2. Check DB
+        Token storedToken = tokenRepository.findByToken(refreshToken)
+                .filter(t -> !t.getRevoked() && t.getExpiredAt().isAfter(Instant.now()))
+                .orElseThrow(() -> new RefreshTokenRevokedException("Refresh token is invalid or expired."));
 
-        // Load userDetails
-        UserDetails userDetails =
-                userDetailsService.loadUserByUsername(
-                        storedToken.getUser().getEmail()
-                );
+        UserDetails userDetails = userDetailsService.loadUserByUsername(storedToken.getUser().getEmail());
 
-        // Kiểm tra refresh token còn hợp lệ
+        // 3. Validate chữ ký + thời gian
         if (!jwtService.isValidateToken(refreshToken, userDetails)) {
-
-            // Nếu token hết hạn → set expired trong DB
-            storedToken.setExpired(true);
             storedToken.setRevoked(true);
             tokenRepository.save(storedToken);
-
-            throw new RuntimeException("Refresh token is expired. Please login again.");
+            redisService.blacklistRefreshToken(refreshToken, 0); // blacklist ngay lập tức
+            throw new RefreshTokenRevokedException("Refresh token is expired. Please login again.");
         }
 
-        // Sinh Access Token mới
+        // 4. Tạo access token mới
         return jwtService.generateAccessToken(userDetails);
     }
 
     @Transactional
     @Override
-    public void deleteAllByUser(User user) {
-        tokenRepository.deleteAllByUser(user);
+    public void revokeRefreshToken(String refreshToken) {
+        tokenRepository.findByToken(refreshToken).ifPresent(token -> {
+            token.setRevoked(true);
+            tokenRepository.save(token);
+
+            long ttl = jwtService.getRefreshTokenRemainingSeconds(refreshToken);
+            if (ttl > 0) {
+                redisService.blacklistRefreshToken(refreshToken, ttl);
+            }
+        });
     }
+
+    @Transactional
+    @Override
+    public void revokeAllUserRefreshTokens(User user) {
+        List<Token> allTokens = tokenRepository.findAllByUser(user);
+        if (allTokens.isEmpty()) return;
+
+        allTokens.forEach(t -> {
+            t.setRevoked(true);
+            long ttl = jwtService.getRefreshTokenRemainingSeconds(t.getToken());
+            if (ttl > 0) {
+                redisService.blacklistRefreshToken(t.getToken(), ttl);
+            }
+        });
+
+        tokenRepository.saveAll(allTokens);
+    }
+
+    // Scheduler sẽ gọi method này để xóa token đã revoked và expired
+    @Transactional
+    @Scheduled(cron = "0 0 2 * * *") // 2h sáng mỗi ngày
+    @Override
+    public void cleanupExpiredAndRevokedTokens() {
+        tokenRepository.deleteAllRevokedAndExpired();
+    }
+
+    @Override
+    public void limitTokensPerDevice(User user, String deviceType, int maxTokensPerDevice) {
+        List<Token> tokens = tokenRepository.findAllActiveTokensByUserAndDeviceType(user, deviceType);
+
+        // Nếu vượt quá số lượng cho phép → revoke token cũ nhất
+        if (tokens.size() >= maxTokensPerDevice) {
+            int numToRevoke = tokens.size() - maxTokensPerDevice + 1; // +1 để nhường chỗ token mới
+
+            for (int i = 0; i < numToRevoke; i++) {
+                Token token = tokens.get(i);
+                token.setRevoked(true);
+
+                // Blacklist trong Redis
+                long ttl = jwtService.getRefreshTokenRemainingSeconds(token.getToken());
+                if (ttl > 0) {
+                    redisService.blacklistRefreshToken(token.getToken(), ttl);
+                }
+            }
+
+            tokenRepository.saveAll(tokens.subList(0, numToRevoke));
+        }
+    }
+
 }
