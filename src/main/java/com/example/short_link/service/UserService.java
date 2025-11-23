@@ -25,4 +25,8 @@ public interface UserService {
 
     @Transactional
     void changePassword(ChangePasswordRequest request);
+
+    void generateAndSendOtp(String email);
+
+    boolean verifyOtp(String email, String otp);
 }

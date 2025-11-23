@@ -17,6 +17,7 @@ import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.service.UserService;
 import com.example.short_link.util.AuthenticationUtil;
+import com.example.short_link.util.EmailService;
 import com.example.short_link.util.RedisService;
 import com.example.short_link.util.UserAgentParsingUtil;
 import jakarta.servlet.http.Cookie;
@@ -27,7 +28,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -49,6 +50,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtService jwtService;
+    private final EmailService emailService;
     private final AuthenticationUtil authenticationUtil;
 
     @Override
@@ -231,5 +233,38 @@ public class UserServiceImpl implements UserService {
 
         // Xóa khỏi SecurityContextHolder
         SecurityContextHolder.clearContext();
+    }
+
+
+    private String generateOtp() {
+        SecureRandom random = new SecureRandom();
+        // Sinh số ngẫu nhiên từ 100000 đến 999999 (đảm bảo 6 chữ số)
+        int otpInt = random.nextInt(900000) + 100000;
+        return String.valueOf(otpInt);
+    }
+
+    @Override
+    public void generateAndSendOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DataNotFoundException("cant fount this email"));
+
+        String otp = generateOtp();
+        redisService.saveOtp(email, otp, 5);
+
+        emailService.sendOtpEmail(email, otp);
+    }
+
+    @Override
+    public boolean verifyOtp(String email, String otp) {
+        // Lấy mã OTP từ Redis và xóa key (đảm bảo OTP chỉ dùng 1 lần)
+        String storedOtp = redisService.getOtpAndRemove(email);
+
+        if (storedOtp == null) {
+            // Key không tồn tại, có nghĩa là OTP đã hết hạn hoặc chưa được tạo.
+            return false;
+        }
+
+        // So sánh mã OTP người dùng nhập và mã đã lưu
+        return storedOtp.equals(otp);
     }
 }

@@ -22,6 +22,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -96,6 +97,35 @@ public class AuthController {
     public ResponseEntity<?> changePassword(
             @RequestBody ChangePasswordRequest request){
         userService.changePassword(request);
-        return ResponseEntity.ok("ok");
+        return ResponseEntity.ok(Map.of(
+                "message", "Change Password Successfully"
+        ));
+    }
+
+    @PostMapping("/otp/send")
+    public ResponseEntity<?> sendOtp(@RequestParam String email) {
+        userService.generateAndSendOtp(email);
+        return ResponseEntity.ok(Map.of(
+                "message", "OTP has been sent to your email."
+        ));
+    }
+
+    @PostMapping("/otp/verify")
+    public ResponseEntity<?> verifyOtp(
+            @RequestParam String email,
+            @RequestParam String otp
+    ) {
+        boolean valid = userService.verifyOtp(email, otp);
+
+        if (!valid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "message", "Invalid or expired OTP"
+                    ));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "message", "OTP verified successfully"
+        ));
     }
 }

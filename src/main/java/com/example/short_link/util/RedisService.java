@@ -51,4 +51,18 @@ public class RedisService {
         return isTokenBlacklisted("blacklist:refresh:", token);
     }
 
+
+    // Phương thức lưu OTP:
+    public void saveOtp(String email, String otp, long ttlMinutes) {
+        String key = "otp:" + email; // Key sẽ là: otp:user@example.com
+        // Lưu với thời gian sống (TTL)
+        redisTemplate.opsForValue().set(key, otp, ttlMinutes, TimeUnit.MINUTES);
+    }
+
+    // Phương thức lấy OTP và XÓA (để OTP chỉ dùng được 1 lần):
+    public String getOtpAndRemove(String email) {
+        String key = "otp:" + email;
+        // Lấy giá trị và xóa key trong một thao tác duy nhất
+        return redisTemplate.opsForValue().getAndDelete(key);
+    }
 }
