@@ -28,5 +28,7 @@ public interface UserService {
 
     void generateAndSendOtp(String email);
 
-    boolean verifyOtp(String email, String otp);
+    String verifyOtpAndGenerateResetToken(String email, String otp);
+
+    void resetPasswordByToken(String email, String newPassword);
 }

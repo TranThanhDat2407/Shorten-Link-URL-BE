@@ -1,10 +1,7 @@
 package com.example.short_link.controller;
 
 import com.example.short_link.dto.request.*;
-import com.example.short_link.dto.response.AccessTokenResponse;
-import com.example.short_link.dto.response.AuthResponse;
-import com.example.short_link.dto.response.LogoutResponse;
-import com.example.short_link.dto.response.RegisterResponse;
+import com.example.short_link.dto.response.*;
 import com.example.short_link.entity.Token;
 import com.example.short_link.entity.User;
 import com.example.short_link.sercurity.jwt.JwtService;
@@ -35,8 +32,8 @@ public class AuthController {
     private final RedisService redisService;
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register (
-            @Valid @RequestBody RegisterRequest request){
+    public ResponseEntity<RegisterResponse> register(
+            @Valid @RequestBody RegisterRequest request) {
         User user = userService.register(request);
         RegisterResponse response = RegisterResponse.builder()
                 .message("Create user " + user.getEmail() + " successfully")
@@ -46,9 +43,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login (
+    public ResponseEntity<AuthResponse> login(
             @RequestBody LoginRequest request,
-            HttpServletRequest httpServletRequest){
+            HttpServletRequest httpServletRequest) {
         AuthResponse auth = userService.login(request, httpServletRequest);
 
         return ResponseEntity.ok(auth);
@@ -94,38 +91,67 @@ public class AuthController {
     }
 
     @PostMapping("/changePassword")
-    public ResponseEntity<?> changePassword(
-            @RequestBody ChangePasswordRequest request){
+    public ResponseEntity<SimpleResponse> changePassword(
+            @RequestBody ChangePasswordRequest request) {
         userService.changePassword(request);
-        return ResponseEntity.ok(Map.of(
-                "message", "Change Password Successfully"
-        ));
+        return ResponseEntity.ok(SimpleResponse.builder()
+                .success(true)
+                .message("Change Password Successfully")
+                .build()
+        );
     }
 
-    @PostMapping("/otp/send")
-    public ResponseEntity<?> sendOtp(@RequestParam String email) {
-        userService.generateAndSendOtp(email);
-        return ResponseEntity.ok(Map.of(
-                "message", "OTP has been sent to your email."
-        ));
+    @PostMapping("/forgot-password")
+    public ResponseEntity<SimpleResponse> sendOtp(
+            @Valid @RequestBody SendOtpRequest request) {
+
+        userService.generateAndSendOtp(request.getEmail());
+
+        return ResponseEntity.ok(SimpleResponse.builder()
+                .success(true)
+                .message("Send OTP Successfully, Pls check your email!")
+                .build()
+        );
     }
 
-    @PostMapping("/otp/verify")
-    public ResponseEntity<?> verifyOtp(
-            @RequestParam String email,
-            @RequestParam String otp
-    ) {
-        boolean valid = userService.verifyOtp(email, otp);
+    @PostMapping("/verify-otp")
+    public ResponseEntity<VerifyOtpResponse> verifyOtp(
+            @Valid @RequestBody VerifyOtpRequest request) {
 
-        if (!valid) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "message", "Invalid or expired OTP"
-                    ));
+        String resetToken = userService.verifyOtpAndGenerateResetToken(
+                request.getEmail(),
+                request.getOtp()
+        );
+
+        return ResponseEntity.ok(
+                VerifyOtpResponse.builder()
+                        .resetToken(resetToken)
+                        .expiresIn(900) // 15 phút
+                        .message("Valid OTP, you can reset password in 15 mins")
+                        .build()
+
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<SimpleResponse> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        String token = null;
+
+        if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7).trim();
         }
 
-        return ResponseEntity.ok(Map.of(
-                "message", "OTP verified successfully"
-        ));
+        String email = jwtService.validatePasswordResetToken(token); // sẽ throw nếu invalid
+
+        userService.resetPasswordByToken(email, request.getNewPassword());
+
+        return ResponseEntity.ok(SimpleResponse.builder()
+                .success(true)
+                .message("Reset Password Successfully! Pls login")
+                .build()
+        );
     }
 }

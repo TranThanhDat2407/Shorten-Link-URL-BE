@@ -1,68 +1,64 @@
 package com.example.short_link.util;
 
+
+import io.lettuce.core.KeyScanCursor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class RedisService {
     private final StringRedisTemplate redisTemplate;
-    private static final String BLACKLISTED_VALUE = "1";
 
-    public void set(String key, String value, long timeout, TimeUnit timeUnit){
-        redisTemplate.opsForValue().set(key, value, timeout, timeUnit);
-    }
+    private static final String OTP_PREFIX = "otp:";
+    private static final String BLACKLIST_PREFIX = "blacklist:jti:";
 
-    public String get(String key){
-        return redisTemplate.opsForValue().get(key);
-    }
-
-    public void delete(String key){
-        redisTemplate.delete(key);
-    }
-
-    // Blacklist access token
-    public void blacklistAccessToken(String token, long seconds) {
-        if (seconds <= 0) return;
+    public void saveOtp(String email, String otp, Duration ttl) {
         redisTemplate.opsForValue()
-                .set("blacklist:access:" + token, BLACKLISTED_VALUE, seconds, TimeUnit.SECONDS);
+                .set(OTP_PREFIX + email, otp, ttl);
     }
 
-    // Blacklist refresh token
-    public void blacklistRefreshToken(String token, long seconds) {
-        if (seconds <= 0) return;
-        redisTemplate.opsForValue()
-                .set("blacklist:refresh:" + token, BLACKLISTED_VALUE, seconds, TimeUnit.SECONDS);
-    }
-
-    // Check
-    public boolean isTokenBlacklisted(String prefix, String token) {
-        return redisTemplate.hasKey(prefix + token);
-    }
-
-    public boolean isAccessTokenBlacklisted(String token) {
-        return isTokenBlacklisted("blacklist:access:", token);
-    }
-
-    public boolean isRefreshTokenBlacklisted(String token) {
-        return isTokenBlacklisted("blacklist:refresh:", token);
-    }
-
-
-    // Phương thức lưu OTP:
-    public void saveOtp(String email, String otp, long ttlMinutes) {
-        String key = "otp:" + email; // Key sẽ là: otp:user@example.com
-        // Lưu với thời gian sống (TTL)
-        redisTemplate.opsForValue().set(key, otp, ttlMinutes, TimeUnit.MINUTES);
-    }
-
-    // Phương thức lấy OTP và XÓA (để OTP chỉ dùng được 1 lần):
     public String getOtpAndRemove(String email) {
-        String key = "otp:" + email;
-        // Lấy giá trị và xóa key trong một thao tác duy nhất
-        return redisTemplate.opsForValue().getAndDelete(key);
+        String key = OTP_PREFIX + email;
+        String otp = redisTemplate.opsForValue().get(key);
+        redisTemplate.delete(key);
+        return otp;
     }
+
+    public long incrementAndExpire(String key, long value, Duration ttl) {
+        Long result = redisTemplate.opsForValue().increment(key, value);
+        if (result != null && result == value) { // lần đầu tạo key
+            redisTemplate.expire(key, ttl);
+        }
+        return result != null ? result : 0;
+    }
+
+    public void set(String key, String value, Duration ttl) {
+        redisTemplate.opsForValue().set(key, value, ttl);
+    }
+
+    public boolean exists(String key) {
+        return redisTemplate.hasKey(key);
+    }
+
+    public long getTtl(String key) {
+        Long ttl = redisTemplate.getExpire(key);
+        return ttl != null && ttl > 0 ? ttl : 0;
+    }
+
+    public void blacklistToken(String jti, long seconds) {
+        redisTemplate.opsForValue()
+                .set(BLACKLIST_PREFIX + jti, "1", Duration.ofSeconds(seconds));
+    }
+
+    public boolean isTokenBlacklisted(String jti) {
+        return redisTemplate.hasKey(BLACKLIST_PREFIX + jti);
+    }
+
 }

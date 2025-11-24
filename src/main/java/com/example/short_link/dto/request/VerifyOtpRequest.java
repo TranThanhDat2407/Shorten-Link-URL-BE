@@ -1,0 +1,18 @@
+package com.example.short_link.dto.request;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+@Data
+public class VerifyOtpRequest {
+    @NotBlank
+    @Email
+    private String email;
+    @NotBlank
+    @Size(min = 6, max = 6, message = "OTP must have 6 digits")
+    @Pattern(regexp = "\\d{6}", message = "OTP contains only number")
+    private String otp;
+}

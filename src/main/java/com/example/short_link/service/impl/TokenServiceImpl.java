@@ -54,9 +54,10 @@ public class TokenServiceImpl implements TokenService {
 
             // Đồng thời đưa vào Redis blacklist
             activeTokens.forEach(t -> {
-                long ttl = jwtService.getRefreshTokenRemainingSeconds(t.getToken());
+                String jti = jwtService.extractJti(t.getToken());
+                long ttl = jwtService.getRemainingSeconds(t.getToken());
                 if (ttl > 0) {
-                    redisService.blacklistRefreshToken(t.getToken(), ttl);
+                    redisService.blacklistToken(jti, ttl);
                 }
             });
         }
@@ -70,7 +71,7 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public String refreshAccessToken(String refreshToken) {
         // 1. Check Redis blacklist
-        if (redisService.isRefreshTokenBlacklisted(refreshToken)) {
+        if (redisService.isTokenBlacklisted(refreshToken)) {
             throw new RefreshTokenRevokedException("Refresh token has been revoked. Please login again.");
         }
 
@@ -82,10 +83,10 @@ public class TokenServiceImpl implements TokenService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(storedToken.getUser().getEmail());
 
         // 3. Validate chữ ký + thời gian
-        if (!jwtService.isValidateToken(refreshToken, userDetails)) {
+        if (!jwtService.isRefreshTokenValid(refreshToken, userDetails)) {
             storedToken.setRevoked(true);
             tokenRepository.save(storedToken);
-            redisService.blacklistRefreshToken(refreshToken, 0); // blacklist ngay lập tức
+            redisService.blacklistToken(refreshToken, 0); // blacklist ngay lập tức
             throw new RefreshTokenRevokedException("Refresh token is expired. Please login again.");
         }
 
@@ -100,9 +101,10 @@ public class TokenServiceImpl implements TokenService {
             token.setRevoked(true);
             tokenRepository.save(token);
 
-            long ttl = jwtService.getRefreshTokenRemainingSeconds(refreshToken);
+            long ttl = jwtService.getRemainingSeconds(refreshToken);
+            String jti = jwtService.extractJti(token.getToken());
             if (ttl > 0) {
-                redisService.blacklistRefreshToken(refreshToken, ttl);
+                redisService.blacklistToken(jti, ttl);
             }
         });
     }
@@ -113,11 +115,13 @@ public class TokenServiceImpl implements TokenService {
         List<Token> allTokens = tokenRepository.findAllByUser(user);
         if (allTokens.isEmpty()) return;
 
+
         allTokens.forEach(t -> {
             t.setRevoked(true);
-            long ttl = jwtService.getRefreshTokenRemainingSeconds(t.getToken());
+            String jti = jwtService.extractJti(t.getToken());
+            long ttl = jwtService.getRemainingSeconds(t.getToken());
             if (ttl > 0) {
-                redisService.blacklistRefreshToken(t.getToken(), ttl);
+                redisService.blacklistToken(jti, ttl);
             }
         });
 
@@ -143,11 +147,11 @@ public class TokenServiceImpl implements TokenService {
             for (int i = 0; i < numToRevoke; i++) {
                 Token token = tokens.get(i);
                 token.setRevoked(true);
-
+                String jti = jwtService.extractJti(token.getToken());
                 // Blacklist trong Redis
-                long ttl = jwtService.getRefreshTokenRemainingSeconds(token.getToken());
+                long ttl = jwtService.getRemainingSeconds(token.getToken());
                 if (ttl > 0) {
-                    redisService.blacklistRefreshToken(token.getToken(), ttl);
+                    redisService.blacklistToken(jti, ttl);
                 }
             }
 

@@ -1,5 +1,6 @@
 package com.example.short_link.sercurity.filter;
 
+import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.util.RedisService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,6 +20,7 @@ import java.io.IOException;
 @Slf4j
 public class JwtBlackListFilter extends OncePerRequestFilter {
     private final RedisService redisService;
+    private final JwtService jwtService;
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -32,13 +34,11 @@ public class JwtBlackListFilter extends OncePerRequestFilter {
         }
         log.info(">>> Đã vào JwtBlackListFilter");
         String jwt = authHeader.substring(7);
+        //  Extract jti
+        String jti = jwtService.extractJti(jwt);
 
-        if (jwt != null && redisService.isAccessTokenBlacklisted(jwt)) {
-            log.warn("Token bị blacklist: {}", jwt.substring(0, 30) + "...");
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"TOKEN_REVOKED\",\"message\"" +
-                    ":\"TOKEN REVOKED PLS LOGIN.\"}");
+        //  Kiểm tra blacklist jti
+        if (jti != null && redisService.isTokenBlacklisted(jti)) {
             return;
         }
 

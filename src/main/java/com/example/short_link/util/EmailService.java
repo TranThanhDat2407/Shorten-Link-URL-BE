@@ -3,56 +3,57 @@ package com.example.short_link.util;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailService {
     private final JavaMailSender mailSender;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
 
-    public void sendOtpEmail(String toEmail, String otp) {
+    @Async
+    public void sendOtpEmail(String to, String otp, Instant expiresAt) {
         try {
-            // 1. Tạo MimeMessage
             MimeMessage message = mailSender.createMimeMessage();
-
-            // 2. Sử dụng MimeMessageHelper để dễ dàng thiết lập các thuộc tính
-            // Tham số thứ hai (true) chỉ định rằng đây là email có nội dung multipart/HTML
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            helper.setTo(to);
+            helper.setSubject("Mã OTP xác thực ShortLink");
             helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
-            helper.setSubject("Mã OTP Đặt lại Mật khẩu của Bạn");
 
-            // --- Nội dung HTML để làm nổi bật OTP ---
-            // Sử dụng <b> hoặc <strong> để in đậm, hoặc thêm style cho màu sắc/kích cỡ.
-            // Dùng <br> cho ngắt dòng.
+            String htmlBody = """
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                        <h2 style="color: #2E8B57;">Xác minh tài khoản ShortLink</h2>
+                        <p>Mã OTP của bạn là:</p>
+                        <h1 style="font-size: 32px; letter-spacing: 8px; color: #2E8B57;">%s</h1>
+                        <p>Mã này sẽ hết hạn vào <strong>%s</strong></p>
+                        <p>Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email.</p>
+                        <hr>
+                        <small>ShortLink Team &copy; 2025</small>
+                    </div>
+                    """.formatted(otp, DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy")
+                    .withZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .format(expiresAt));
 
-            String htmlBody = String.format(
-                    "<html><body>" +
-                            "<h4>Chào bạn,</h4>" +
-                            "<p>Đây là mã OTP để đặt lại mật khẩu cho tài khoản của bạn:</p>" +
-                            "<p>Mã OTP: <strong><span style='color: #d9534f; font-size: 18px; border: 1px solid #ccc; padding: 5px; border-radius: 4px;'>%s</span></strong></p>" +
-                            "<p>Mã này sẽ hết hạn trong 5 phút. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>" +
-                            "<p>Trân trọng,<br>" +
-                            "Đội ngũ Hỗ trợ</p>" +
-                            "</body></html>",
-                    otp
-            );
-
-            // 3. Thiết lập nội dung là HTML
-            helper.setText(htmlBody, true); // Tham số 'true' thứ hai cho biết nội dung là HTML
-
+            helper.setText(htmlBody, true);
             mailSender.send(message);
-            System.out.println("Email OTP đã được gửi thành công đến: " + toEmail);
+
+            log.info("OTP email sent successfully to {}", to);
         } catch (Exception e) {
-            System.err.println("Lỗi khi gửi email OTP đến " + toEmail + ": " + e.getMessage());
-            // Tùy chọn: throw new RuntimeException("Gửi email thất bại", e);
+            log.error("Failed to send OTP email to {}: {}", to, e.getMessage());
+            // Không throw → tránh làm crash request
         }
     }
 

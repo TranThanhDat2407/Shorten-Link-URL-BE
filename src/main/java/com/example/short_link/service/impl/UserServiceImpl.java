@@ -9,7 +9,9 @@ import com.example.short_link.entity.User;
 import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
 import com.example.short_link.exception.DataNotFoundException;
+import com.example.short_link.exception.InvalidOtpException;
 import com.example.short_link.exception.PermissionDenyException;
+import com.example.short_link.exception.TooManyRequestsException;
 import com.example.short_link.repository.UserRepository;
 import com.example.short_link.repository.spec.UserSpecification;
 import com.example.short_link.sercurity.jwt.JwtService;
@@ -37,7 +39,9 @@ import org.springframework.util.StringUtils;
 
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 @Service
@@ -115,7 +119,7 @@ public class UserServiceImpl implements UserService {
 
         // 6. Tạo refresh token mới
         String refreshToken = jwtService.generateRefreshToken(userDetails);
-        Instant expiresAt = jwtService.getRefreshTokenExpirationInstant();
+        Instant expiresAt = jwtService.extractExpiration(refreshToken);
 
 
         // 7. Lấy device + IP
@@ -173,9 +177,9 @@ public class UserServiceImpl implements UserService {
     public void logout(String accessToken, String refreshToken, HttpServletResponse response) {
         // 1. Blacklist Access Token (nếu có)
         if (StringUtils.hasText(accessToken)) {
-            long remainingSeconds = jwtService.getAccessTokenRemainingSeconds(accessToken);
+            long remainingSeconds = jwtService.getRemainingSeconds(accessToken);
             if (remainingSeconds > 0) {
-                redisService.blacklistAccessToken(accessToken, remainingSeconds);
+                redisService.blacklistToken(accessToken, remainingSeconds);
             }
         }
 
@@ -185,9 +189,9 @@ public class UserServiceImpl implements UserService {
             tokenService.revokeRefreshToken(refreshToken);
 
             // Blacklist trong Redis (nếu hệ thống có nhiều instance)
-            long refreshRemaining = jwtService.getRefreshTokenRemainingSeconds(refreshToken);
+            long refreshRemaining = jwtService.getRemainingSeconds(refreshToken);
             if (refreshRemaining > 0) {
-                redisService.blacklistRefreshToken(refreshToken, refreshRemaining);
+                redisService.blacklistToken(refreshToken, refreshRemaining);
             }
 
         }
@@ -245,26 +249,70 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void generateAndSendOtp(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new DataNotFoundException("cant fount this email"));
+        String normalizedEmail = email.trim().toLowerCase();
+
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy email này"));
+
+        // Rate limit: tối đa 5 lần/giờ
+        String rateKey = "otp:rate:" + normalizedEmail;
+        long count = redisService.incrementAndExpire(rateKey, 1, Duration.ofHours(1));
+        if (count > 5) {
+            throw new TooManyRequestsException("Quá nhiều yêu cầu OTP. Vui lòng thử lại sau 1 giờ");
+        }
+
+        // Cooldown: không cho gửi liên tục trong 60 giây
+        String cooldownKey = "otp:cooldown:" + normalizedEmail;
+        if (redisService.exists(cooldownKey)) {
+            long ttl = redisService.getTtl(cooldownKey);
+            throw new TooManyRequestsException(
+                    String.format("Vui lòng đợi %d giây trước khi yêu cầu OTP mới", ttl)
+            );
+        }
 
         String otp = generateOtp();
-        redisService.saveOtp(email, otp, 5);
+        Instant expiresAt = Instant.now().plus(5, ChronoUnit.MINUTES);
 
-        emailService.sendOtpEmail(email, otp);
+        // Lưu OTP vào Redis (tự động hết hạn sau 5 phút)
+        redisService.saveOtp(normalizedEmail, otp, Duration.ofMinutes(5));
+
+        // Đặt cooldown 60 giây
+        redisService.set(cooldownKey, "1", Duration.ofSeconds(60));
+
+        // Gửi email bất đồng bộ (không block request)
+        emailService.sendOtpEmail(normalizedEmail, otp, expiresAt);
+
     }
 
     @Override
-    public boolean verifyOtp(String email, String otp) {
-        // Lấy mã OTP từ Redis và xóa key (đảm bảo OTP chỉ dùng 1 lần)
-        String storedOtp = redisService.getOtpAndRemove(email);
+    public String verifyOtpAndGenerateResetToken(String email, String otp) {
+        String normalizedEmail = email.trim().toLowerCase();
 
-        if (storedOtp == null) {
-            // Key không tồn tại, có nghĩa là OTP đã hết hạn hoặc chưa được tạo.
-            return false;
+        // Lấy và xóa OTP (one-time use)
+        String storedOtp = redisService.getOtpAndRemove(normalizedEmail);
+
+        if (storedOtp == null || !storedOtp.equals(otp)) {
+            throw new InvalidOtpException("Mã OTP không đúng hoặc đã hết hạn");
         }
 
-        // So sánh mã OTP người dùng nhập và mã đã lưu
-        return storedOtp.equals(otp);
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new DataNotFoundException("User not found"));
+
+        // Tạo token reset password (15 phút, chỉ dùng 1 lần)
+        String resetToken = jwtService.generatePasswordResetToken(normalizedEmail);
+
+        return resetToken; // frontend sẽ dùng token này để đổi mật khẩu
+    }
+
+    @Override
+    public void resetPasswordByToken(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DataNotFoundException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // ĐÁ HẾT THIẾT BỊ RA (rất quan trọng!)
+        tokenService.revokeAllUserTokens(user);
     }
 }

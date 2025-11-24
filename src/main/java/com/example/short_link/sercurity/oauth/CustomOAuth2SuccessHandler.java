@@ -72,7 +72,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         // 6. Tạo refresh token mới
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
-        Instant expiresAt = jwtService.getRefreshTokenExpirationInstant();
+        Instant expiresAt = jwtService.extractExpiration(refreshToken);
 
         String userAgentHeader = request.getHeader("User-Agent");
         String deviceName = userAgentUtil.getDevice(userAgentHeader)

@@ -36,6 +36,21 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.FORBIDDEN, ex.getMessage(), "Permission_Deny");
     }
 
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidTokenExceptions(Exception ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Invalid_Token");
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiErrorResponse> handleTooManyRequestsExceptions(Exception ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Too_Many_Request");
+    }
+
+    @ExceptionHandler(InvalidOtpException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidOtpExceptions(Exception ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Invalid_OTP");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
 
