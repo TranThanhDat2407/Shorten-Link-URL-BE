@@ -47,6 +47,18 @@ public class JwtService {
                 .compact();
     }
 
+    public String generatePasswordResetToken(String email) {
+        Instant now = Instant.now();
+
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("type", "PASSWORD_RESET")     // phân biệt với access token
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(now.plus(15, ChronoUnit.MINUTES))) // 15 phút
+                .signWith(getSignKey(), SignatureAlgorithm.HS256) // key của bạn (HS512 hoặc RS256)
+                .compact();
+    }
+
     private Key getSignKey() {
         //Giải mã secretKey từ Base64 bằng Decoders.BASE64.decode().
         byte[] bytes = Decoders.BASE64.decode(secretKey);

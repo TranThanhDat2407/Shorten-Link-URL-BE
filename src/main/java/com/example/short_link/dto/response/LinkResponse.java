@@ -13,6 +13,8 @@ public class LinkResponse {
     private Long id;
     private String originalUrl;
     private String shortCode;
+    private String qrCodeUrl;
+    private Boolean isQrGenerated;
     private Long clickCount;
     private Instant expiredAt;
     private Instant createdAt;
@@ -24,6 +26,8 @@ public class LinkResponse {
                 .id(link.getId())
                 .originalUrl(link.getOriginalUrl())
                 .shortCode(link.getShortCode())
+                .qrCodeUrl(link.getQrCodeUrl())
+                .isQrGenerated(link.isQrGenerated())
                 .clickCount(link.getClickCount() == null ? 0 : link.getClickCount())
                 .expiredAt(link.getExpiredAt() == null ?
                         Instant.now().plus(10, ChronoUnit.DAYS) : link.getExpiredAt())

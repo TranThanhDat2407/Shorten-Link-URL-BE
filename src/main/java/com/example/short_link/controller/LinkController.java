@@ -35,7 +35,7 @@ public class LinkController {
 
     @PostMapping("/create")
     public ResponseEntity<CreateShortCodeResponse> createShortLink(
-            @RequestBody CreateShortCodeRequest request) {
+            @RequestBody CreateShortCodeRequest request) throws Exception {
 
         Link link = linkService.CreateShortLink(request.getOriginalUrl());
 
@@ -48,7 +48,8 @@ public class LinkController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/redirect/{shortCode}")
+    // redirect
+    @GetMapping("/{shortCode}")
     public ResponseEntity<?> redirectToOriginal(
             @PathVariable String shortCode,
             HttpServletRequest request) {

@@ -31,6 +31,12 @@ public class Link extends BaseEntityWIthUpdate{
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(name = "qr_code_url", length = 512)
+    private String qrCodeUrl;
+
+    @Column(name = "qr_generated", nullable = false)
+    private boolean qrGenerated = false;
+
     @OneToMany(mappedBy = "link", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LinkClickLog> linkClickLog = new ArrayList<>();
 }

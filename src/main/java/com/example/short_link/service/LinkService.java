@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface LinkService {
-    Link CreateShortLink(String originalUrl);
+    Link CreateShortLink(String originalUrl) throws Exception;
 
     Link getOriginalLinkByShortCode(String shortCode);
 
