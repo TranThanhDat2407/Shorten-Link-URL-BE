@@ -140,8 +140,8 @@ public class UserServiceImpl implements UserService {
                 refreshToken, 7 * 24 * 60 * 60); // 7 ngày
 
         return AuthResponse.builder()
-//                .accessToken(accessToken)
-//                .refreshToken(refreshToken)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .fullName(existingUser.getFullName())
                 .role(existingUser.getRole().toString())
                 .build();
@@ -312,7 +312,7 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // ĐÁ HẾT THIẾT BỊ RA (rất quan trọng!)
+        // ĐÁ HẾT THIẾT BỊ RA
         tokenService.revokeAllUserTokens(user);
     }
 }

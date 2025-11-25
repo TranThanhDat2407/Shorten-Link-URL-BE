@@ -4,9 +4,11 @@ import com.example.short_link.dto.request.*;
 import com.example.short_link.dto.response.*;
 import com.example.short_link.entity.Token;
 import com.example.short_link.entity.User;
+import com.example.short_link.exception.RefreshTokenRevokedException;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.service.UserService;
+import com.example.short_link.util.CookiesUtil;
 import com.example.short_link.util.RedisService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,6 +25,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class AuthController {
     private final UserService userService;
+    private final CookiesUtil cookiesUtil;
     private final TokenService tokenService;
     private final JwtService jwtService;
     private final RedisService redisService;
@@ -49,14 +52,29 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AccessTokenResponse> refresh(@RequestBody TokenRefreshRequest request) {
-        String newAccessToken = tokenService.refreshAccessToken(
-                request.getRefreshToken()
-        );
-        AccessTokenResponse accessTokenResponse = AccessTokenResponse.builder()
-                .accessToken(newAccessToken)
+    public ResponseEntity<AccessTokenResponse> refresh(
+            HttpServletRequest request,
+            HttpServletResponse response
+
+    ) {
+        // LẤY REFRESH TOKEN TỪ COOKIE
+        String refreshToken = cookiesUtil.getCookieValue(request, "refresh_token");
+        if (!StringUtils.hasText(refreshToken)) {
+            throw new RefreshTokenRevokedException("No refresh token found");
+        }
+
+        // Gọi service để tạo access token mới
+        String newAccessToken = tokenService.refreshAccessToken(refreshToken);
+
+        // QUAN TRỌNG: Set lại access_token mới vào cookie
+        cookiesUtil.setCookie(response, "access_token", newAccessToken, 15 * 60);
+
+        // Trả về JSON nhẹ (không cần refreshToken nữa)
+        AccessTokenResponse res = AccessTokenResponse.builder()
+                .accessToken(newAccessToken)  // vẫn trả để tương thích cũ (nếu cần)
                 .build();
-        return ResponseEntity.ok(accessTokenResponse);
+
+        return ResponseEntity.ok(res);
     }
 
     @PostMapping("/logout")
