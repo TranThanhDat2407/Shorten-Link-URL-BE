@@ -12,15 +12,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("${api.prefix}/auth")
@@ -45,8 +41,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(
             @RequestBody LoginRequest request,
+            HttpServletResponse httpServletresponse,
             HttpServletRequest httpServletRequest) {
-        AuthResponse auth = userService.login(request, httpServletRequest);
+        AuthResponse auth = userService.login(request, httpServletresponse ,httpServletRequest);
 
         return ResponseEntity.ok(auth);
     }

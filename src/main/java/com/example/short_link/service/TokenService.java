@@ -3,6 +3,7 @@ package com.example.short_link.service;
 import com.example.short_link.entity.Token;
 import com.example.short_link.entity.User;
 import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Service;
 
 
 import java.time.Instant;

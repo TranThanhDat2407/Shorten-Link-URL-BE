@@ -3,12 +3,14 @@ package com.example.short_link.service.impl;
 import com.example.short_link.dto.request.LinkSearchRequest;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.User;
+import com.example.short_link.exception.DataNotFoundException;
 import com.example.short_link.repository.LinkRepository;
 import com.example.short_link.repository.spec.LinkSpecification;
 import com.example.short_link.service.LinkService;
 import com.example.short_link.util.AuthenticationUtil;
 import com.example.short_link.util.Base62Converter;
 import com.example.short_link.util.QrCodeService;
+import com.example.short_link.util.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +25,7 @@ public class LinkServiceImpl implements LinkService {
     private final Base62Converter base62Converter;
     private final AuthenticationUtil authenticationUtil;
     private final QrCodeService qrCodeService;
+    private final RedisService redisService;
 
     @Transactional
     @Override
@@ -92,5 +95,23 @@ public class LinkServiceImpl implements LinkService {
 
 
         return shortLinkRepository.findAll(spec, pageable);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        Link link = shortLinkRepository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("Link not found"));
+
+        shortLinkRepository.delete(link);
+    }
+
+    @Override
+    public Link  replaceLinkById(String replaceLink, Long id) {
+        Link link = shortLinkRepository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("Link not found"));
+
+        link.setOriginalUrl(replaceLink);
+
+        return shortLinkRepository.save(link);
     }
 }

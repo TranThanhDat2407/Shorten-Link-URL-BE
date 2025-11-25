@@ -18,10 +18,7 @@ import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.service.UserService;
-import com.example.short_link.util.AuthenticationUtil;
-import com.example.short_link.util.EmailService;
-import com.example.short_link.util.RedisService;
-import com.example.short_link.util.UserAgentParsingUtil;
+import com.example.short_link.util.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -55,6 +52,7 @@ public class UserServiceImpl implements UserService {
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtService jwtService;
     private final EmailService emailService;
+    private final CookiesUtil cookiesUtil;
     private final AuthenticationUtil authenticationUtil;
 
     @Override
@@ -89,7 +87,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
+    public AuthResponse login(LoginRequest request,
+                              HttpServletResponse response,
+                              HttpServletRequest httpRequest) {
         Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
 
         if (userOptional.isEmpty()) {
@@ -134,9 +134,14 @@ public class UserServiceImpl implements UserService {
         // 8. Lưu refresh token kèm device info
         tokenService.saveUserToken(existingUser, refreshToken, expiresAt, deviceName, ipAddress);
 
+        cookiesUtil.setCookie(response, "access_token",
+                accessToken, 15 * 60);   // 15 phút
+        cookiesUtil.setCookie(response, "refresh_token",
+                refreshToken, 7 * 24 * 60 * 60); // 7 ngày
+
         return AuthResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
+//                .accessToken(accessToken)
+//                .refreshToken(refreshToken)
                 .fullName(existingUser.getFullName())
                 .role(existingUser.getRole().toString())
                 .build();
@@ -197,12 +202,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // xóa trong cookie
-        Cookie cookie = new Cookie("refreshToken", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        cookiesUtil.revokeCookies(response, "access_token", "refresh_token");
 
         // Optional: Clear SecurityContext (dù stateless nhưng vẫn nên)
         SecurityContextHolder.clearContext();

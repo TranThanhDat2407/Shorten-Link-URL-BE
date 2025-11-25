@@ -17,7 +17,7 @@ public interface UserService {
 
     void logout(String accessToken, String refreshToken, HttpServletResponse response);
 
-    AuthResponse login(LoginRequest request, HttpServletRequest httpRequest);
+    AuthResponse login(LoginRequest request, HttpServletResponse response, HttpServletRequest httpRequest);
 
     User findByEmail(String email);
 

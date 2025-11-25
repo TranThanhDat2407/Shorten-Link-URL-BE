@@ -8,6 +8,7 @@ import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.sercurity.user.CustomUserDetails;
 import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import com.example.short_link.service.TokenService;
+import com.example.short_link.util.CookiesUtil;
 import com.example.short_link.util.UserAgentParsingUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -33,6 +34,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private final TokenService tokenService;
     private final CustomUserDetailsService customUserDetailsService;
     private final UserAgentParsingUtil userAgentUtil;
+    private final CookiesUtil cookiesUtil;
 
     @Value("${spring.application.frontend-domain}")
     private String frontEndDomain;
@@ -86,23 +88,12 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         // Lưu Refresh Token
         tokenService.saveUserToken(user, refreshToken, expiresAt, deviceName, ipAddress);
 
-        long refreshTokenValiditySeconds = 604800L; // thời gian tồn tại của cookie
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(true); // CHỈ DÙNG TRONG MÔI TRƯỜNG PRODUCTION (HTTPS)
-        refreshCookie.setMaxAge((int) refreshTokenValiditySeconds);
-        refreshCookie.setPath("/"); // Có thể truy cập từ mọi đường dẫn
+        cookiesUtil.setCookie(response, "access_token",
+                accessToken, 15 * 60);   // 15 phút
+        cookiesUtil.setCookie(response, "refresh_token",
+                refreshToken, 7 * 24 * 60 * 60); // 7 ngày
 
-        response.addCookie(refreshCookie);
-
-        // 6. Gửi access token luôn cho client (JSON)
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        String json = String.format(
-                "{\"accessToken\":\"%s\",\"refreshToken\":\"%s\"}",
-                accessToken, refreshToken
-        );
-        response.getWriter().write(json);
-        response.getWriter().flush();
+        String redirectUrl = "http://localhost:4200/oauth2/success"; // hoặc domain thật
+        response.sendRedirect(redirectUrl);
     }
 }

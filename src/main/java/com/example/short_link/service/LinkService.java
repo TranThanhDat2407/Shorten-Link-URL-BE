@@ -14,4 +14,8 @@ public interface LinkService {
 
     Page<Link> getAllLinks(LinkSearchRequest request, Pageable pageable);
 
+    void deleteById (Long id);
+
+    Link  replaceLinkById (String replaceLink, Long id);
+
 }

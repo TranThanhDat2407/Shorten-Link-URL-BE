@@ -2,13 +2,17 @@ package com.example.short_link.util;
 
 
 import io.lettuce.core.KeyScanCursor;
+import io.lettuce.core.api.sync.RedisCommands;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -18,6 +22,10 @@ public class RedisService {
 
     private static final String OTP_PREFIX = "otp:";
     private static final String BLACKLIST_PREFIX = "blacklist:jti:";
+
+    private static final String CACHE_SHORT = "sl:code:";     // sl:code:abc123 → originalUrl
+    private static final String CACHE_ID    = "sl:id:";       // sl:id:12345 → full Link JSON
+    private static final String CLICK_TEMP  = "sl:click:";    // sl:click:abc123 → temporary click count
 
     public void saveOtp(String email, String otp, Duration ttl) {
         redisTemplate.opsForValue()

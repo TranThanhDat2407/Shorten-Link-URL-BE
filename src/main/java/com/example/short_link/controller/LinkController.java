@@ -2,13 +2,16 @@ package com.example.short_link.controller;
 
 import com.example.short_link.dto.request.CreateShortCodeRequest;
 import com.example.short_link.dto.request.LinkSearchRequest;
+import com.example.short_link.dto.request.UpdateLinkRequest;
 import com.example.short_link.dto.response.CreateShortCodeResponse;
 import com.example.short_link.dto.response.LinkResponse;
+import com.example.short_link.dto.response.SimpleResponse;
 import com.example.short_link.entity.Link;
 import com.example.short_link.service.LinkClickLogService;
 import com.example.short_link.service.LinkService;
 import com.example.short_link.util.AuthenticationUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -73,7 +76,7 @@ public class LinkController {
     public ResponseEntity<Page<LinkResponse>> getAllLinks(
             @ModelAttribute LinkSearchRequest request,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable){
+            Pageable pageable) {
         Page<Link> result = linkService.getAllLinks(request, pageable);
 
         Page<LinkResponse> responses = result.map(
@@ -97,6 +100,29 @@ public class LinkController {
 
         Page<Link> page = linkService.getAllLinks(request, pageable);
         return ResponseEntity.ok(page.map(LinkResponse::fromEntity));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<SimpleResponse> deleteMyLink(@PathVariable Long id) {
+
+        linkService.deleteById(id);
+
+        return ResponseEntity.ok(SimpleResponse.builder()
+                .success(true)
+                .message("Link deleted")
+                .build()
+        );
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<?> updateMyLink(
+            @PathVariable Long id,
+            @RequestBody UpdateLinkRequest request) {
+
+        Link updated = linkService.replaceLinkById(request.getOriginalUrl(), id);
+        return ResponseEntity.ok(LinkResponse.fromEntity(updated));
     }
 
 }
