@@ -9,4 +9,5 @@ public class CreateShortCodeResponse {
     private String shortUrl;
     private String code;
     private String originalUrl;
+    private String qrCodeUrl;
 }

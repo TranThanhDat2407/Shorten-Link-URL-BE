@@ -45,6 +45,7 @@ public class LinkController {
         CreateShortCodeResponse response = CreateShortCodeResponse.builder()
                 .code(link.getShortCode())
                 .shortUrl(frontEndDomain + "/" + link.getShortCode())
+                .qrCodeUrl(link.getQrCodeUrl())
                 .originalUrl(link.getOriginalUrl())
                 .build();
 
@@ -60,8 +61,10 @@ public class LinkController {
         Link link = linkService.getOriginalLinkByShortCode(shortCode);
 
         if (link == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Short link not found");
+            // Trả 404 + đẩy về trang 404 của frontend
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create("/not-found"))
+                    .build();
         }
 
         linkClickLogService.logClickDetails(link, request);

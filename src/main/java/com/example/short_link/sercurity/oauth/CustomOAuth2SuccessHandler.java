@@ -1,5 +1,6 @@
 package com.example.short_link.sercurity.oauth;
 
+import com.example.short_link.dto.response.AuthResponse;
 import com.example.short_link.entity.User;
 import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
@@ -10,6 +11,7 @@ import com.example.short_link.sercurity.user.CustomUserDetailsService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.util.CookiesUtil;
 import com.example.short_link.util.UserAgentParsingUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +26,8 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 @Component
@@ -93,7 +97,18 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         cookiesUtil.setCookie(response, "refresh_token",
                 refreshToken, 7 * 24 * 60 * 60); // 7 ngày
 
-        String redirectUrl = "http://localhost:4200/oauth2/success"; // hoặc domain thật
+        AuthResponse authResponse = AuthResponse.builder()
+                .fullName(user.getFullName())
+                .role(user.getRole().toString())
+                .pictureUrl(user.getPictureUrl())
+                .build();
+
+        // Redirect về frontend + mang theo data
+        String redirectUrl = frontEndDomain + "/google-success?data=" +
+                URLEncoder.encode(
+                        new ObjectMapper().writeValueAsString(authResponse)
+                        , StandardCharsets.UTF_8);
+
         response.sendRedirect(redirectUrl);
     }
 }

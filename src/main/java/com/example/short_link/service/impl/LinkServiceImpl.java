@@ -27,13 +27,24 @@ public class LinkServiceImpl implements LinkService {
     private final QrCodeService qrCodeService;
     private final RedisService redisService;
 
-    @Transactional
     @Override
     public Link CreateShortLink(String originalUrl) throws Exception {
         User user = authenticationUtil.getCurrentAuthenticatedUser();
 
+        if (originalUrl == null || originalUrl.trim().isEmpty()) {
+            throw new IllegalArgumentException("Original URL cannot be empty.");
+        }
+
+        // chuẩn hóa url nếu thiếu http https
+        String standardizedUrl = standardizeUrl(originalUrl);
+
+        // Kiểm tra tính hợp lệ của URL đã chuẩn hóa
+        if (!isValidUrl(standardizedUrl)) {
+            throw new IllegalArgumentException("Invalid URL format: " + originalUrl);
+        }
+
         Link link = Link.builder()
-                .originalUrl(originalUrl)
+                .originalUrl(standardizedUrl)
                 .clickCount(0L)
                 .user(user)
                 .build();
@@ -113,5 +124,29 @@ public class LinkServiceImpl implements LinkService {
         link.setOriginalUrl(replaceLink);
 
         return shortLinkRepository.save(link);
+    }
+
+    private boolean isValidUrl(String urlString) {
+        try {
+            // Kiểm tra cơ bản: URL phải có giao thức (protocol)
+            // Nếu URL thiếu http:// hoặc https://, nó sẽ fail.
+            // Tự động thêm http:// nếu cần trước khi kiểm tra là một tùy chọn,
+            // nhưng tốt nhất nên để người dùng nhập đúng định dạng.
+            new java.net.URL(urlString).toURI();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String standardizeUrl(String urlString) {
+        String trimmedUrl = urlString.trim();
+        // Sử dụng Regex để kiểm tra xem chuỗi có bắt đầu bằng http:
+        // hoặc https:// (bỏ qua case) hay không
+        if (!trimmedUrl.toLowerCase().matches("^https?://.*")) {
+            // Nếu không có, thêm http:// vào đầu
+            return "http://" + trimmedUrl;
+        }
+        return trimmedUrl;
     }
 }

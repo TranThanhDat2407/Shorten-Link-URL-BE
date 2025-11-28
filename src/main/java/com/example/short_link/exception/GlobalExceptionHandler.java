@@ -4,6 +4,7 @@ import com.example.short_link.dto.response.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -49,6 +50,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidOtpException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidOtpExceptions(Exception ex) {
         return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Invalid_OTP");
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadCredentialExceptions(Exception ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Bad_Credential");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -12,4 +12,6 @@ public class RegisterRequest {
 
     @NotBlank(message = "Please fill the password")
     private String password;
+
+
 }

@@ -99,7 +99,7 @@ public class UserServiceImpl implements UserService {
         User existingUser = userOptional.get();
 
         if (existingUser.getProvider() == AuthProvider.GOOGLE) {
-            throw new RuntimeException("This account was registered via Google. " +
+            throw new BadCredentialsException("This account was registered via Google. " +
                     "Use Google Login instead.");
         }
 
@@ -144,6 +144,7 @@ public class UserServiceImpl implements UserService {
                 .refreshToken(refreshToken)
                 .fullName(existingUser.getFullName())
                 .role(existingUser.getRole().toString())
+                .pictureUrl(existingUser.getPictureUrl())
                 .build();
     }
 
