@@ -5,4 +5,5 @@ import lombok.Data;
 @Data
 public class CreateShortCodeRequest {
     private String originalUrl;
+    private boolean generateQrCode = false;
 }

@@ -7,6 +7,7 @@ import com.example.short_link.exception.RefreshTokenRevokedException;
 import com.example.short_link.repository.TokenRepository;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.service.TokenService;
+import com.example.short_link.util.CookiesUtil;
 import com.example.short_link.util.RedisService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -87,6 +88,7 @@ public class TokenServiceImpl implements TokenService {
             storedToken.setRevoked(true);
             tokenRepository.save(storedToken);
             redisService.blacklistToken(refreshToken, 0); // blacklist ngay lập tức
+
             throw new RefreshTokenRevokedException("Refresh token is expired. Please login again.");
         }
 

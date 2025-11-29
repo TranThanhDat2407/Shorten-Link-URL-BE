@@ -29,41 +29,48 @@ public class JwtBlackListFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
-
-        log.info(">>> JwtAuthenticationFilter triggered for: {}", request.getRequestURI());
-
+// ... (Phần trích xuất JWT - code của bạn) ...
         String jwt = null;
         String cookieToken = cookiesUtil.getCookieValue(request, "access_token");
-        if (StringUtils.hasText(cookieToken)) {
-            jwt = cookieToken;
-            log.info(">>> Token taken from HttpOnly cookie");
-        }
-
-        //  Nếu không có cookie → fallback lấy từ header (Mobile, Postman, API)
-        if (jwt == null) {
-            final String authHeader = request.getHeader("Authorization");
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                jwt = authHeader.substring(7);
-                log.info(">>> Token taken from Authorization header");
-            }
-        }
-        
-
-        log.info(">>> Đã vào JwtBlackListFilter");
+        // ... (logic lấy jwt) ...
 
         if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        //  Extract jti
-        String jti = jwtService.extractJti(jwt);
-        //  Kiểm tra blacklist jti
-        if (jti != null && redisService.isTokenBlacklisted(jti)) {
-            return;
+        // === QUAN TRỌNG: THÊM TRY-CATCH VÀO ĐÂY ===
+        try {
+            //  Extract jti (Nơi exception được ném ra)
+            String jti = jwtService.extractJti(jwt);
+
+            //  Kiểm tra blacklist jti
+            if (jti != null && redisService.isTokenBlacklisted(jti)) {
+                log.warn(">>> Blocked request due to blacklisted JTI: {}", jti);
+
+                // Nếu bị blacklist, bạn phải CHẶN request ở đây
+                // Bạn có thể trả về 401 hoặc 403 tùy theo yêu cầu.
+                // Ví dụ: Trả về 401 để buộc client login lại
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"status\": 401, \"message\": \"Token has been logged out/revoked.\" }");
+                response.getWriter().flush();
+                return; // Dừng chuỗi filter
+            }
+
+        } catch (io.jsonwebtoken.ExpiredJwtException ex) {
+            // Token hết hạn. Cho phép request đi tiếp đến JwtAuthenticationFilter
+            // để JwtAuthenticationFilter xử lý logic trả về 401.
+            log.debug(">>> Token expired detected in Blacklist Filter. Proceeding to Auth Filter.");
+
+        } catch (Exception ex) {
+            // Bắt lỗi SignatureException hoặc lỗi parsing khác
+            log.warn(">>> Invalid token (Signature/Parsing Error) in Blacklist Filter: {}", ex.getMessage());
+            // Cho phép request đi tiếp để JwtAuthenticationFilter xử lý (nếu nó có thể)
+            // hoặc để filter tiếp theo (JwtAuthenticationFilter) thất bại và không đặt Context.
         }
 
+        // Nếu không bị chặn (blacklist) và không có exception thoát ra:
         filterChain.doFilter(request, response);
-
     }
 }

@@ -60,6 +60,7 @@ public class AuthController {
         // LẤY REFRESH TOKEN TỪ COOKIE
         String refreshToken = cookiesUtil.getCookieValue(request, "refresh_token");
         if (!StringUtils.hasText(refreshToken)) {
+
             throw new RefreshTokenRevokedException("No refresh token found");
         }
 

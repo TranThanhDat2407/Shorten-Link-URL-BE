@@ -4,6 +4,7 @@ import com.example.short_link.dto.request.LinkSearchRequest;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.User;
 import com.example.short_link.exception.DataNotFoundException;
+import com.example.short_link.exception.InvalidTokenException;
 import com.example.short_link.repository.LinkRepository;
 import com.example.short_link.repository.spec.LinkSpecification;
 import com.example.short_link.service.LinkService;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,13 +28,22 @@ public class LinkServiceImpl implements LinkService {
     private final RedisService redisService;
 
     @Override
-    public Link CreateShortLink(String originalUrl) throws Exception {
-        User user = authenticationUtil.getCurrentAuthenticatedUser();
+    public Link createShortLinkForGuest(String originalUrl, boolean generateQrCode) throws Exception {
+        return createShortLink(originalUrl, null, generateQrCode);
+    }
 
+    @Override
+    public Link createShortLinkForUser(String originalUrl, User user, boolean generateQrCode)
+            throws Exception {
+        return createShortLink(originalUrl, user, generateQrCode);
+    }
+
+    public Link createShortLink(String originalUrl,
+                                User user,
+                                boolean generateQrCode) throws Exception {
         if (originalUrl == null || originalUrl.trim().isEmpty()) {
             throw new IllegalArgumentException("Original URL cannot be empty.");
         }
-
         // chuẩn hóa url nếu thiếu http https
         String standardizedUrl = standardizeUrl(originalUrl);
 
@@ -59,7 +68,12 @@ public class LinkServiceImpl implements LinkService {
         //Cập nhật Short Code vào bản ghi vừa tạo
         link.setShortCode(shortCode);
 
-        qrCodeService.generateAndUploadQrCode(link);
+        // Chỉ tạo QR nếu người dùng yêu cầu
+        if (generateQrCode) {
+            qrCodeService.generateAndUploadQrCode(link);
+        } else {
+            link.setQrCodeUrl(null); // hoặc để trống tùy yêu cầu
+        }
 
         // Không cần gọi save() lần nữa nếu @Transactional đang mở, nhưng gọi
         // explicit save là an toàn và dễ đọc hơn.
@@ -117,7 +131,7 @@ public class LinkServiceImpl implements LinkService {
     }
 
     @Override
-    public Link  replaceLinkById(String replaceLink, Long id) {
+    public Link replaceLinkById(String replaceLink, Long id) {
         Link link = shortLinkRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Link not found"));
 

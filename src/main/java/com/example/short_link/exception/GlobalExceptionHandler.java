@@ -1,6 +1,9 @@
 package com.example.short_link.exception;
 
 import com.example.short_link.dto.response.ApiErrorResponse;
+import com.example.short_link.util.CookiesUtil;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,7 +18,9 @@ import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+    private final CookiesUtil cookiesUtil;
 
     @ExceptionHandler(DataNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleDataNotFoundExceptions(Exception ex) {
@@ -23,7 +28,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RefreshTokenRevokedException.class)
-    public ResponseEntity<ApiErrorResponse> handleRefreshTokenRevokedExceptions(Exception ex) {
+    public ResponseEntity<ApiErrorResponse> handleRefreshTokenRevokedExceptions(
+            Exception ex,
+            HttpServletResponse response) {
+        cookiesUtil.revokeCookie(response, "access_token");
+        cookiesUtil.revokeCookie(response, "refresh_token");
         return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage(), "Refresh_Token_Expired");
     }
 
@@ -101,8 +110,6 @@ public class GlobalExceptionHandler {
                 "UNAUTHORIZED"
         );
     }
-
-
 
     private ResponseEntity<ApiErrorResponse> buildError(
             HttpStatus status,

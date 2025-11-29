@@ -7,6 +7,8 @@ import com.example.short_link.dto.response.CreateShortCodeResponse;
 import com.example.short_link.dto.response.LinkResponse;
 import com.example.short_link.dto.response.SimpleResponse;
 import com.example.short_link.entity.Link;
+import com.example.short_link.entity.User;
+import com.example.short_link.exception.InvalidTokenException;
 import com.example.short_link.service.LinkClickLogService;
 import com.example.short_link.service.LinkService;
 import com.example.short_link.util.AuthenticationUtil;
@@ -21,6 +23,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -36,11 +39,39 @@ public class LinkController {
     @Value("${spring.application.frontend-domain}")
     private String frontEndDomain;
 
-    @PostMapping("/create")
-    public ResponseEntity<CreateShortCodeResponse> createShortLink(
+    @PostMapping("/create/public")
+    public ResponseEntity<CreateShortCodeResponse> createShortLinkGuest(
             @RequestBody CreateShortCodeRequest request) throws Exception {
 
-        Link link = linkService.CreateShortLink(request.getOriginalUrl());
+        Link link = linkService.createShortLinkForGuest(
+                request.getOriginalUrl()
+                ,request.isGenerateQrCode());
+
+        CreateShortCodeResponse response = CreateShortCodeResponse.builder()
+                .code(link.getShortCode())
+                .shortUrl(frontEndDomain + "/" + link.getShortCode())
+                .qrCodeUrl(link.getQrCodeUrl())
+                .originalUrl(link.getOriginalUrl())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/create")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<CreateShortCodeResponse> createShortLinkUser(
+            @RequestBody CreateShortCodeRequest request) throws Exception {
+
+        User user = authenticationUtil.getCurrentAuthenticatedUser();
+
+        if (user == null) {
+            throw new InvalidTokenException("User must not be null for authenticated link creation");
+        }
+
+        Link link = linkService.createShortLinkForUser(
+                request.getOriginalUrl(),
+                user
+                ,request.isGenerateQrCode());
 
         CreateShortCodeResponse response = CreateShortCodeResponse.builder()
                 .code(link.getShortCode())
