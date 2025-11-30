@@ -9,6 +9,7 @@ import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.service.TokenService;
 import com.example.short_link.util.CookiesUtil;
 import com.example.short_link.util.RedisService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -149,11 +150,17 @@ public class TokenServiceImpl implements TokenService {
             for (int i = 0; i < numToRevoke; i++) {
                 Token token = tokens.get(i);
                 token.setRevoked(true);
-                String jti = jwtService.extractJti(token.getToken());
-                // Blacklist trong Redis
-                long ttl = jwtService.getRemainingSeconds(token.getToken());
-                if (ttl > 0) {
-                    redisService.blacklistToken(jti, ttl);
+                try {
+                    String jti = jwtService.extractJti(token.getToken());
+                    long ttl = jwtService.getRemainingSeconds(token.getToken());
+
+                    if (ttl > 0) {
+                        redisService.blacklistToken(jti, ttl);
+                    }
+
+                } catch (ExpiredJwtException ex) {
+                    // Token đã hết hạn => không cần blacklist => chỉ đánh dấu revoked
+                    System.out.println("Old token expired, skip blacklisting");
                 }
             }
 

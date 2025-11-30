@@ -120,21 +120,26 @@ public class LinkController {
         return ResponseEntity.ok(responses);
     }
 
-    @GetMapping("/my-links")
+    @PostMapping("/my-links")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<Page<LinkResponse>> getMyLinks(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable
+            @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable,
+            @RequestBody(required = false) LinkSearchRequest request
     ) {
+        if (request == null) {
+            request = new LinkSearchRequest();
+        }
 
-        String currentUserId = String.valueOf(authenticationUtil.getCurrentAuthenticatedUser().getId());
-
-        LinkSearchRequest request = new LinkSearchRequest();
-        request.setUserId(currentUserId);
+        request.setUserId(
+                String.valueOf(authenticationUtil.getCurrentAuthenticatedUser().getId())
+        );
 
         Page<Link> page = linkService.getAllLinks(request, pageable);
+
         return ResponseEntity.ok(page.map(LinkResponse::fromEntity));
     }
+
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('USER')")

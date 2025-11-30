@@ -115,9 +115,16 @@ public class LinkServiceImpl implements LinkService {
             }
         }
 
-        spec = spec.and(LinkSpecification.containsShortCode(request.getShortCode()));
-        spec = spec.and(LinkSpecification.containsOriginalUrl(request.getOriginalUrl()));
+        if (request.getShortCode() != null && !request.getShortCode().trim().isEmpty()) {
+            String keyword = request.getShortCode().trim();
+            spec = spec.and(
+                    LinkSpecification.containsShortCode(keyword)
+                            .or(LinkSpecification.containsOriginalUrl(keyword))
+            );
+        }
 
+        spec = spec.and(LinkSpecification.createdBetween(
+                request.getCreatedFrom(), request.getCreatedTo()));
 
         return shortLinkRepository.findAll(spec, pageable);
     }
