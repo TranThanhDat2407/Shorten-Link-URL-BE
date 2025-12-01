@@ -1,8 +1,10 @@
 package com.example.short_link.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Link extends BaseEntityWIthUpdate{
+public class Link extends BaseEntityWIthUpdate implements Serializable {
     @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
     private String originalUrl;
 
@@ -27,8 +29,9 @@ public class Link extends BaseEntityWIthUpdate{
     @Column(name = "expired_at")
     private Instant expiredAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
 
     @Column(name = "qr_code_url", length = 512)
@@ -38,5 +41,6 @@ public class Link extends BaseEntityWIthUpdate{
     private boolean qrGenerated = false;
 
     @OneToMany(mappedBy = "link", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<LinkClickLog> linkClickLog = new ArrayList<>();
 }

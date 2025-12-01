@@ -29,7 +29,6 @@ public class LinkClickLogServiceImpl implements LinkClickLogService {
         String userAgent = request.getHeader("User-Agent");
         String ipAddress = request.getRemoteAddr();
 
-
         String device = userAgentParsingUtil.getDevice(userAgent);
         String browser = userAgentParsingUtil.getBrowser(userAgent);
 

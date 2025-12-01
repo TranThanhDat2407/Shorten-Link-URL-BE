@@ -4,7 +4,6 @@ import com.example.short_link.dto.request.LinkSearchRequest;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.User;
 import com.example.short_link.exception.DataNotFoundException;
-import com.example.short_link.exception.InvalidTokenException;
 import com.example.short_link.repository.LinkRepository;
 import com.example.short_link.repository.spec.LinkSpecification;
 import com.example.short_link.service.LinkService;
@@ -12,11 +11,18 @@ import com.example.short_link.util.AuthenticationUtil;
 import com.example.short_link.util.Base62Converter;
 import com.example.short_link.util.QrCodeService;
 import com.example.short_link.util.RedisService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +32,7 @@ public class LinkServiceImpl implements LinkService {
     private final AuthenticationUtil authenticationUtil;
     private final QrCodeService qrCodeService;
     private final RedisService redisService;
+    private static final Duration TTL_LINK_CACHE = Duration.ofMinutes(30);
 
     @Override
     public Link createShortLinkForGuest(String originalUrl, boolean generateQrCode) throws Exception {
@@ -82,16 +89,40 @@ public class LinkServiceImpl implements LinkService {
 
     @Override
     public Link getOriginalLinkByShortCode(String shortCode) {
-        long id = base62Converter.decode(shortCode);
+//        long id = base62Converter.decode(shortCode);
+//
+//        Link link = shortLinkRepository.findById(id).orElse(null);
+//
+//        return link;
+        String cacheKey = RedisService.CACHE_SHORT + shortCode; // sl:code:abc123
 
+        Link cachedLink = redisService.get(cacheKey, Link.class);
+
+        if (cachedLink != null) {
+            // Trả về đối tượng Detached Object từ cache
+            return cachedLink;
+        }
+
+        //Cache miss: Truy vấn DB
+        long id = base62Converter.decode(shortCode);
         Link link = shortLinkRepository.findById(id).orElse(null);
 
-        if (link == null) return null;
+        // Nếu tìm thấy, lưu URL vào cache
+        if (link != null) {
+            redisService.set(cacheKey, link, TTL_LINK_CACHE);
+        }
 
-        link.setClickCount(link.getClickCount() + 1);
-        shortLinkRepository.save(link);
-
+        // Trả về đối tượng Persistent từ DB
         return link;
+    }
+
+
+    @Override
+    public void incrementClickCount(Link link) {
+//        link.setClickCount(link.getClickCount() + 1);
+//        shortLinkRepository.save(link);
+        redisService.logTemporaryClick(link.getShortCode(),Duration.ofMinutes(30));
+
     }
 
     @Override
@@ -170,4 +201,5 @@ public class LinkServiceImpl implements LinkService {
         }
         return trimmedUrl;
     }
+
 }

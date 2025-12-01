@@ -12,10 +12,12 @@ import com.example.short_link.exception.InvalidTokenException;
 import com.example.short_link.service.LinkClickLogService;
 import com.example.short_link.service.LinkService;
 import com.example.short_link.util.AuthenticationUtil;
+import com.example.short_link.util.RedisService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,6 +35,7 @@ import java.net.URI;
 @RequestMapping("${api.prefix}/short-link")
 public class LinkController {
     private final LinkService linkService;
+    private final RedisService redisService;
     private final LinkClickLogService linkClickLogService;
     private final AuthenticationUtil authenticationUtil;
 
@@ -100,16 +103,18 @@ public class LinkController {
 
         linkClickLogService.logClickDetails(link, request);
 
+        linkService.incrementClickCount(link);
+
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(link.getOriginalUrl()))
                 .build();
     }
 
+    @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping
     public ResponseEntity<Page<LinkResponse>> getAllLinks(
             @ModelAttribute LinkSearchRequest request,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
+            @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
         Page<Link> result = linkService.getAllLinks(request, pageable);
 
