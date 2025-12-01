@@ -11,18 +11,13 @@ import com.example.short_link.util.AuthenticationUtil;
 import com.example.short_link.util.Base62Converter;
 import com.example.short_link.util.QrCodeService;
 import com.example.short_link.util.RedisService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -176,6 +171,14 @@ public class LinkServiceImpl implements LinkService {
         link.setOriginalUrl(replaceLink);
 
         return shortLinkRepository.save(link);
+    }
+
+    @Override
+    public Link getLinkDetails(Long id){
+        Link link = shortLinkRepository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("Link not found"));
+
+        return link;
     }
 
     private boolean isValidUrl(String urlString) {

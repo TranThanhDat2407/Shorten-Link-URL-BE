@@ -14,7 +14,7 @@ import java.time.Instant;
 @Builder
 public class LinkClickLog extends BaseEntity{
     @Column(name = "clicked_at")
-    private Instant clicked_at;
+    private Instant clickedAt;
 
     @Column(name = "ip")
     private String ip;

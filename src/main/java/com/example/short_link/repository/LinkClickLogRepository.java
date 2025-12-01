@@ -4,6 +4,8 @@ import com.example.short_link.dto.response.DailyClickResponse;
 import com.example.short_link.dto.response.TopLinkResponse;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.LinkClickLog;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,18 +16,20 @@ import java.util.List;
 
 @Repository
 public interface LinkClickLogRepository extends JpaRepository<LinkClickLog, Long> {
+    Page<LinkClickLog> findAllByLink(Link link, Pageable pageable);
+
     @Query("SELECT COUNT(c) " +
             "FROM LinkClickLog c" +
-            " WHERE FUNCTION('DATE', c.clicked_at) = CURRENT_DATE")
+            " WHERE FUNCTION('DATE', c.clickedAt) = CURRENT_DATE")
     Long countTodayClicks();
 
     // số lượng click trong ngày -- có khoảng từ ngày bắt đầu tới ngày kết thúc
     @Query("""
-            SELECT FUNCTION('DATE', c.clicked_at), COUNT(c)
+            SELECT FUNCTION('DATE', c.clickedAt), COUNT(c)
             FROM LinkClickLog c
-            WHERE c.clicked_at >= :start AND c.clicked_at <= :end
-            GROUP BY FUNCTION('DATE', c.clicked_at)
-            ORDER BY FUNCTION('DATE', c.clicked_at)
+            WHERE c.clickedAt >= :start AND c.clickedAt <= :end
+            GROUP BY FUNCTION('DATE', c.clickedAt)
+            ORDER BY FUNCTION('DATE', c.clickedAt)
             """)
     List<Object[]> countClicksByDateRaw(Instant start, Instant end);
 
@@ -33,7 +37,7 @@ public interface LinkClickLogRepository extends JpaRepository<LinkClickLog, Long
     @Query("""
             SELECT l.shortCode, l.originalUrl, COUNT(c)
             FROM LinkClickLog c JOIN c.link l
-            WHERE c.clicked_at >= :start AND c.clicked_at <= :end
+            WHERE c.clickedAt >= :start AND c.clickedAt <= :end
             GROUP BY l.id, l.shortCode, l.originalUrl
             ORDER BY COUNT(c) DESC
             """)
@@ -51,7 +55,7 @@ public interface LinkClickLogRepository extends JpaRepository<LinkClickLog, Long
     // đếm số lượng click theo khoảng ngày
     @Query("SELECT COUNT(c) " +
             "FROM LinkClickLog c " +
-            "WHERE c.link = :link AND c.clicked_at >= :start AND c.clicked_at <= :end")
+            "WHERE c.link = :link AND c.clickedAt >= :start AND c.clickedAt <= :end")
     Long countByLinkAndRange(@Param("link") Link link, Instant start, Instant end);
 
     // đếm số lượng click all time
@@ -61,7 +65,7 @@ public interface LinkClickLogRepository extends JpaRepository<LinkClickLog, Long
     // đếm số IP đã click theo khoảng ngày
     @Query("SELECT COUNT(DISTINCT c.ip) " +
             "FROM LinkClickLog c " +
-            "WHERE c.link = :link AND c.clicked_at >= :start AND c.clicked_at <= :end")
+            "WHERE c.link = :link AND c.clickedAt >= :start AND c.clickedAt <= :end")
     Long countDistinctIpWithRange(@Param("link") Link link, Instant start, Instant end);
 
     // đếm số IP đã click all time
@@ -70,22 +74,22 @@ public interface LinkClickLogRepository extends JpaRepository<LinkClickLog, Long
 
     // đếm số lượng click theo  link cụ thể khoảng ngày
     @Query("""
-            SELECT FUNCTION('DATE', c.clicked_at), COUNT(c)
+            SELECT FUNCTION('DATE', c.clickedAt), COUNT(c)
             FROM LinkClickLog c
             WHERE c.link = :link
-              AND c.clicked_at >= :start AND c.clicked_at <= :end
-            GROUP BY FUNCTION('DATE', c.clicked_at)
-            ORDER BY FUNCTION('DATE', c.clicked_at)
+              AND c.clickedAt >= :start AND c.clickedAt <= :end
+            GROUP BY FUNCTION('DATE', c.clickedAt)
+            ORDER BY FUNCTION('DATE', c.clickedAt)
             """)
     List<Object[]> countDailyByLinkWithRange(@Param("link") Link link, Instant start, Instant end);
 
     // đếm số lượng click theo  link cụ thể all time
     @Query("""
-            SELECT FUNCTION('DATE', c.clicked_at), COUNT(c)
+            SELECT FUNCTION('DATE', c.clickedAt), COUNT(c)
             FROM LinkClickLog c
             WHERE c.link = :link
-            GROUP BY FUNCTION('DATE', c.clicked_at)
-            ORDER BY FUNCTION('DATE', c.clicked_at)
+            GROUP BY FUNCTION('DATE', c.clickedAt)
+            ORDER BY FUNCTION('DATE', c.clickedAt)
             """)
     List<Object[]> countDailyByLinkAllTime(@Param("link") Link link);
 

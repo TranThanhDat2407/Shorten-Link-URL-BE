@@ -25,4 +25,5 @@ public interface LinkService {
 
     Link  replaceLinkById (String replaceLink, Long id);
 
+    Link getLinkDetails(Long id);
 }

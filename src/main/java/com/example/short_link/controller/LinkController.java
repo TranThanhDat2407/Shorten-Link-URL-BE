@@ -4,9 +4,11 @@ import com.example.short_link.dto.request.CreateShortCodeRequest;
 import com.example.short_link.dto.request.LinkSearchRequest;
 import com.example.short_link.dto.request.UpdateLinkRequest;
 import com.example.short_link.dto.response.CreateShortCodeResponse;
+import com.example.short_link.dto.response.LinkClickLogResponse;
 import com.example.short_link.dto.response.LinkResponse;
 import com.example.short_link.dto.response.SimpleResponse;
 import com.example.short_link.entity.Link;
+import com.example.short_link.entity.LinkClickLog;
 import com.example.short_link.entity.User;
 import com.example.short_link.exception.InvalidTokenException;
 import com.example.short_link.service.LinkClickLogService;
@@ -168,5 +170,29 @@ public class LinkController {
         Link updated = linkService.replaceLinkById(request.getOriginalUrl(), id);
         return ResponseEntity.ok(LinkResponse.fromEntity(updated));
     }
+
+    @GetMapping("details/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<LinkResponse> getLinkDetails(
+            @PathVariable Long id
+         ) {
+
+        Link link = linkService.getLinkDetails(id);
+
+        return ResponseEntity.ok(LinkResponse.fromEntity(link));
+    }
+
+    @GetMapping("/{id}/logs")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Page<LinkClickLogResponse>> getLinkClickLogs(
+            @PathVariable("id") Long linkId,
+            @PageableDefault(size = 10, sort = "clickedAt")
+            Pageable pageable) {
+
+        Page<LinkClickLog> page = linkClickLogService.getLogsByLinkId(linkId, pageable);
+
+        return ResponseEntity.ok(page.map(LinkClickLogResponse::fromEntity));
+    }
+
 
 }

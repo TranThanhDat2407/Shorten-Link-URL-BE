@@ -2,14 +2,18 @@ package com.example.short_link.service.impl;
 
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.LinkClickLog;
+import com.example.short_link.exception.DataNotFoundException;
 import com.example.short_link.repository.LinkClickLogRepository;
+import com.example.short_link.repository.LinkRepository;
 import com.example.short_link.service.LinkClickLogService;
+import com.example.short_link.util.AuthenticationUtil;
 import com.example.short_link.util.GeoInfo;
 import com.example.short_link.util.IpGeolocationUtil;
 import com.example.short_link.util.UserAgentParsingUtil;
-import com.maxmind.geoip2.DatabaseReader;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,6 +23,8 @@ import java.time.Instant;
 public class LinkClickLogServiceImpl implements LinkClickLogService {
 
     private final LinkClickLogRepository linkClickLogRepository;
+    private final LinkRepository linkRepository;
+    private final AuthenticationUtil authenticationUtil;
 
     private final UserAgentParsingUtil userAgentParsingUtil;
     private final IpGeolocationUtil ipGeolocationUtil;
@@ -35,7 +41,7 @@ public class LinkClickLogServiceImpl implements LinkClickLogService {
         GeoInfo geoInfo = ipGeolocationUtil.lookup(ipAddress);
 
         LinkClickLog log =  LinkClickLog.builder()
-                .clicked_at(Instant.now())
+                .clickedAt(Instant.now())
                 .ip(ipAddress)
                 .country(geoInfo.getCountry())
                 .browser(browser)
@@ -44,6 +50,20 @@ public class LinkClickLogServiceImpl implements LinkClickLogService {
                 .build();
 
         linkClickLogRepository.save(log);
+    }
+
+
+    @Override
+    public Page<LinkClickLog> getLogsByLinkId(Long linkId, Pageable pageable) {
+        Link link = linkRepository.findById(linkId)
+                .orElseThrow(() -> new DataNotFoundException("Link not found with id: " + linkId));
+
+//        Long currentUserId = authenticationUtil.getCurrentAuthenticatedUser().getId();
+//        if (!link.getUser().getId().equals(currentUserId)) {
+//            throw new DataNotFoundException("Link not found with id: " + linkId);
+//        }
+
+        return linkClickLogRepository.findAllByLink(link, pageable);
     }
 
 
