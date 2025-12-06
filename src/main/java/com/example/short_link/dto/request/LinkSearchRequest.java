@@ -6,7 +6,8 @@ import java.time.Instant;
 
 @Data
 public class LinkSearchRequest {
-    private String userId;           // null = guest, có giá trị = user cụ thể, không truyền = tất cả
+    private String userId;// null = guest, có giá trị = user cụ thể, không truyền = tất cả
+    private String email;
     private String shortCode;
     private String originalUrl;
     private Instant createdFrom;

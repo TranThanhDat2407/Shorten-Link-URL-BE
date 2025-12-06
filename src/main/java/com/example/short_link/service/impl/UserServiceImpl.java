@@ -253,13 +253,13 @@ public class UserServiceImpl implements UserService {
         String normalizedEmail = email.trim().toLowerCase();
 
         User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy email này"));
+                .orElseThrow(() -> new DataNotFoundException("Email not found"));
 
         // Rate limit: tối đa 5 lần/giờ
         String rateKey = "otp:rate:" + normalizedEmail;
         long count = redisService.incrementAndExpire(rateKey, 1, Duration.ofHours(1));
         if (count > 5) {
-            throw new TooManyRequestsException("Quá nhiều yêu cầu OTP. Vui lòng thử lại sau 1 giờ");
+            throw new TooManyRequestsException("too much request OTP! please wait 1 hour");
         }
 
         // Cooldown: không cho gửi liên tục trong 60 giây
@@ -267,7 +267,7 @@ public class UserServiceImpl implements UserService {
         if (redisService.exists(cooldownKey)) {
             long ttl = redisService.getTtl(cooldownKey);
             throw new TooManyRequestsException(
-                    String.format("Vui lòng đợi %d giây trước khi yêu cầu OTP mới", ttl)
+                    String.format("Please wait %d secs before send new OTP request", ttl)
             );
         }
 
@@ -280,7 +280,7 @@ public class UserServiceImpl implements UserService {
         // Đặt cooldown 60 giây
         redisService.set(cooldownKey, "1", Duration.ofSeconds(60));
 
-        // Gửi email bất đồng bộ (không block request)
+        // Gửi email
         emailService.sendOtpEmail(normalizedEmail, otp, expiresAt);
 
     }
@@ -293,7 +293,7 @@ public class UserServiceImpl implements UserService {
         String storedOtp = redisService.getOtpAndRemove(normalizedEmail);
 
         if (storedOtp == null || !storedOtp.equals(otp)) {
-            throw new InvalidOtpException("Mã OTP không đúng hoặc đã hết hạn");
+            throw new InvalidOtpException("Invalid OTP or expired");
         }
 
         User user = userRepository.findByEmail(normalizedEmail)

@@ -115,9 +115,10 @@ public class LinkController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<LinkResponse>> getAllLinks(
-            @ModelAttribute LinkSearchRequest request,
+            @RequestBody LinkSearchRequest request,
             @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
+
         Page<Link> result = linkService.getAllLinks(request, pageable);
 
         Page<LinkResponse> responses = result.map(
@@ -172,7 +173,7 @@ public class LinkController {
     }
 
     @GetMapping("details/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<LinkResponse> getLinkDetails(
             @PathVariable Long id
          ) {
@@ -183,7 +184,7 @@ public class LinkController {
     }
 
     @GetMapping("/{id}/logs")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<Page<LinkClickLogResponse>> getLinkClickLogs(
             @PathVariable("id") Long linkId,
             @PageableDefault(size = 10, sort = "clickedAt")

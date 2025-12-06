@@ -1,9 +1,6 @@
 package com.example.short_link.service.impl;
 
-import com.example.short_link.dto.response.DailyClickResponse;
-import com.example.short_link.dto.response.DashboardResponse;
-import com.example.short_link.dto.response.LinkAnalyticsResponse;
-import com.example.short_link.dto.response.TopLinkResponse;
+import com.example.short_link.dto.response.*;
 import com.example.short_link.entity.Link;
 import com.example.short_link.repository.LinkClickLogRepository;
 import com.example.short_link.repository.LinkRepository;
@@ -13,9 +10,12 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -54,18 +54,67 @@ public class AdminAnalyzeServiceImpl implements AdminAnalyzeService {
     }
 
     @Override
-    public List<DailyClickResponse> getLast7DaysClicks() {
+    public List<DailyLinksResponse> getLast7DaysLinks() {
         LocalDate end = LocalDate.now(ZONE);
         LocalDate start = end.minusDays(6);
 
-        return logRepository.countClicksByDateRaw(startOfDay(start), endOfDay(end))
+        // Lấy dữ liệu có trong DB
+        List<DailyLinksResponse> dbData = linkRepository
+                .countLinksByDateRaw(startOfDay(start), endOfDay(end))
                 .stream()
-                .map(row -> DailyClickResponse.builder()
+                .map(row -> DailyLinksResponse.builder()
                         .date(((java.sql.Date) row[0]).toLocalDate())
-                        .clicks((Long) row[1])
+                        .links((Long) row[1])
                         .build())
                 .toList();
+
+        // Map ngày -> số links
+        Map<LocalDate, Long> map = dbData.stream()
+                .collect(Collectors.toMap(
+                        DailyLinksResponse::getDate,
+                        DailyLinksResponse::getLinks
+                ));
+
+        // Tạo đầy đủ 7 ngày
+        List<DailyLinksResponse> result = IntStream.rangeClosed(0, 6)
+                .mapToObj(i -> start.plusDays(i))
+                .map(date -> DailyLinksResponse.builder()
+                        .date(date)
+                        .links(map.getOrDefault(date, 0L))
+                        .build())
+                .sorted(Comparator.comparing(DailyLinksResponse::getDate))
+                .toList();
+
+        return result;
     }
+
+    @Override
+    public List<DailyClickResponse> getLast7DaysClicks() {
+        LocalDate end = LocalDate.now(ZONE);
+        LocalDate start = end.minusDays(6);
+        // Lấy dữ liệu thực tế từ DB (chỉ những ngày có click)
+        List<DailyClickResponse> dbData = logRepository
+                .countClicksByDateRaw(startOfDay(start), endOfDay(end))
+                .stream()
+                .map(row -> DailyClickResponse.builder()
+                        // row[0] là java.sql.Date, chuyển thành LocalDate
+                        .date(((java.sql.Date) row[0]).toLocalDate())
+                        .clicks((Long) row[1]).build())
+                .toList();
+        Map<LocalDate, Long> clicksMap = dbData.stream()
+                .collect(Collectors.toMap(DailyClickResponse::getDate, DailyClickResponse::getClicks));
+        List<DailyClickResponse> result = IntStream.rangeClosed(0, 6)
+                .mapToObj(i -> start.plusDays(i))
+                // Lấy từng ngày trong 7 ngày
+                .map(date -> DailyClickResponse.builder()
+                        .date(date) // Lấy số click từ map, nếu không có thì mặc định là 0L
+                        .clicks(clicksMap.getOrDefault(date, 0L))
+                        .build()).sorted(Comparator.comparing(DailyClickResponse::getDate))
+                // Sắp xếp theo ngày
+                .toList();
+        return result;
+    }
+
 
     @Override
     public List<TopLinkResponse> getTopLinks(Integer limit, LocalDate from, LocalDate to) {

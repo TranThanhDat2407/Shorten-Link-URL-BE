@@ -19,6 +19,17 @@ public class LinkSpecification {
         };
     }
 
+    public static Specification<Link> hasOwnerEmail(String email) {
+        return (root, query, cb) -> {
+            if (email == null || email.isBlank()) return null;
+
+            return cb.like(
+                    cb.lower(root.get("user").get("email")),
+                    "%" + email.toLowerCase() + "%"
+            );
+        };
+    }
+
     public static Specification<Link> containsOriginalUrl(String originalUrl){
         return (root, query, cb) ->{
             if (originalUrl == null || originalUrl.isBlank()) return null;

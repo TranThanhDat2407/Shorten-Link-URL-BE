@@ -4,6 +4,7 @@ import com.example.short_link.dto.request.*;
 import com.example.short_link.dto.response.*;
 import com.example.short_link.entity.Token;
 import com.example.short_link.entity.User;
+import com.example.short_link.exception.DataNotFoundException;
 import com.example.short_link.exception.RefreshTokenRevokedException;
 import com.example.short_link.sercurity.jwt.JwtService;
 import com.example.short_link.service.TokenService;
@@ -132,13 +133,16 @@ public class AuthController {
 
     @PostMapping("/verify-otp")
     public ResponseEntity<VerifyOtpResponse> verifyOtp(
-            @Valid @RequestBody VerifyOtpRequest request) {
+            @Valid @RequestBody VerifyOtpRequest request,
+            HttpServletResponse response
+            ) {
 
         String resetToken = userService.verifyOtpAndGenerateResetToken(
                 request.getEmail(),
                 request.getOtp()
         );
 
+        cookiesUtil.setCookie(response,"reset_token", resetToken,15 * 60);
         return ResponseEntity.ok(
                 VerifyOtpResponse.builder()
                         .resetToken(resetToken)
@@ -152,22 +156,31 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<SimpleResponse> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
+        // Lấy token từ cookie HttpOnly
+        String token = cookiesUtil.getCookieValue(httpRequest, "reset_token");
 
-        String token = null;
-
-        if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7).trim();
+        if (token == null) {
+            throw new DataNotFoundException("Missing reset token");
         }
 
-        String email = jwtService.validatePasswordResetToken(token); // sẽ throw nếu invalid
+        // Validate token để lấy email (throw nếu token expired / modified / invalid)
+        String email = jwtService.validatePasswordResetToken(token);
 
+        // Reset password
         userService.resetPasswordByToken(email, request.getNewPassword());
 
-        return ResponseEntity.ok(SimpleResponse.builder()
-                .success(true)
-                .message("Reset Password Successfully! Pls login")
-                .build()
+        // Xóa cookie reset_token sau khi dùng xong
+        cookiesUtil.revokeCookie(httpResponse, "reset_token");
+
+        return ResponseEntity.ok(
+                SimpleResponse.builder()
+                        .success(true)
+                        .message("Reset Password Successfully! Please login")
+                        .build()
         );
     }
+
 }

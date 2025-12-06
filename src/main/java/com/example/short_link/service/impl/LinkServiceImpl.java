@@ -141,6 +141,11 @@ public class LinkServiceImpl implements LinkService {
             }
         }
 
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            spec = spec.and(LinkSpecification.hasOwnerEmail(request.getEmail()));
+        }
+
+
         if (request.getShortCode() != null && !request.getShortCode().trim().isEmpty()) {
             String keyword = request.getShortCode().trim();
             spec = spec.and(

@@ -33,4 +33,13 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 
     long countByCreatedAtBetween(Instant start, Instant end);
 
+    @Query("""
+        SELECT DATE(l.createdAt), COUNT(l)
+        FROM Link l
+        WHERE l.createdAt BETWEEN :start AND :end
+        GROUP BY DATE(l.createdAt)
+        ORDER BY DATE(l.createdAt)
+        """)
+    List<Object[]> countLinksByDateRaw(@Param("start") Instant start,
+                                       @Param("end") Instant end);
 }
