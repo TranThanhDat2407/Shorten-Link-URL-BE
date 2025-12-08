@@ -37,6 +37,9 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final CustomOAuth2SuccessHandler successHandler;
 
+    @Value("${spring.application.frontend-domain}")
+    private String frontEndDomain;
+
     @Value("${api.prefix}")
     private String apiPrefix;
 
@@ -112,7 +115,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:4200"));
+        config.setAllowedOriginPatterns(List.of(frontEndDomain));
         config.setAllowedMethods(List.of("*"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

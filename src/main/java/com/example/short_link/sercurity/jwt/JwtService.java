@@ -38,7 +38,7 @@ public class JwtService {
 
     private final RedisService redisService;
 
-    private SecretKey getSigningKey() {
+    private  synchronized SecretKey getSigningKey() {
         if (signingKey == null) {
             byte[] keyBytes = Decoders.BASE64.decode(secretKey);
             signingKey = Keys.hmacShaKeyFor(keyBytes);
@@ -176,8 +176,14 @@ public class JwtService {
         try {
             Instant expiration = extractExpiration(token);
             return Math.max(0, java.time.Duration.between(Instant.now(), expiration).getSeconds());
+        } catch (io.jsonwebtoken.JwtException e) {
+            //lỗi nghiệp vụ (token hết hạn/sai chữ ký)
+            log.debug("Cannot calculate TTL for token due to JWT Exception: {}", e.getMessage());
+            return 0;
         } catch (Exception e) {
-            log.warn("Cannot calculate TTL for token", e);
+            // lỗi không phải JWT (như NullPointerException)
+            // Nhưng xử lý chúng như lỗi không mong muốn.
+            log.error("Unexpected error when calculating TTL for token", e);
             return 0;
         }
     }

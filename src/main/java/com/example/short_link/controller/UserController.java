@@ -21,13 +21,12 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("${api.prefix}/user")
+@RequestMapping("${api.prefix}/users")
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
     private final LinkService linkService;
 
-    // lấy tất cả user theo filter
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<Page<UserResponse>> getAllUsers(

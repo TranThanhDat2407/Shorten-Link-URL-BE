@@ -1,6 +1,7 @@
 package com.example.short_link.dto.response;
 
 import com.example.short_link.entity.User;
+import com.example.short_link.enums.AuthProvider;
 import com.example.short_link.enums.Role;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,7 @@ public class UserResponse {
     private String fullName;
     private String pictureUrl;
     private Boolean isActive;
+    private AuthProvider provider;
     private Role role;
     private Long totalLink;
 
@@ -22,6 +24,7 @@ public class UserResponse {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .pictureUrl(user.getPictureUrl())
+                .provider(user.getProvider())
                 .isActive(user.isActive())
                 .role(user.getRole())
                 .totalLink(totalLink)
