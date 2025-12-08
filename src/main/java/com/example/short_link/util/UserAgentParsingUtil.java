@@ -1,5 +1,6 @@
 package com.example.short_link.util;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -40,4 +41,6 @@ public class UserAgentParsingUtil {
 
         return "Other";
     }
+
+
 }

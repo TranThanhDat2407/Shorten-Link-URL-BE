@@ -33,7 +33,7 @@ public class LinkClickLogServiceImpl implements LinkClickLogService {
     @Override
     public void logClickDetails(Link link, HttpServletRequest request) {
         String userAgent = request.getHeader("User-Agent");
-        String ipAddress = request.getRemoteAddr();
+        String ipAddress = getClientIp(request);
 
         String device = userAgentParsingUtil.getDevice(userAgent);
         String browser = userAgentParsingUtil.getBrowser(userAgent);
@@ -66,5 +66,20 @@ public class LinkClickLogServiceImpl implements LinkClickLogService {
         return linkClickLogRepository.findAllByLink(link, pageable);
     }
 
+    public String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            // X-Forwarded-For có dạng: "113.22.34.5, 10.0.0.1"
+            return ip.split(",")[0].trim();   // Lấy IP thật của khách
+        }
+
+        ip = request.getHeader("X-Real-IP");
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            return ip;
+        }
+
+        return request.getRemoteAddr(); // fallback
+    }
 
 }
