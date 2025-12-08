@@ -11,20 +11,20 @@ public class CookiesUtil {
     public void setCookie(HttpServletResponse response, String name, String value, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(true);                    // Quan trọng: chống JS đọc
-        cookie.setSecure(false);                      // Chỉ gửi qua HTTPS (dev thì false tạm)
+        cookie.setSecure(true);                      // Chỉ gửi qua HTTPS (dev thì false tạm)
         cookie.setPath("/");                         // Toàn domain
         cookie.setMaxAge(maxAge);
-        cookie.setAttribute("SameSite", "Strict");
+        cookie.setAttribute("SameSite", "None");
         response.addCookie(cookie);
     }
 
     public void revokeCookie(HttpServletResponse response, String name) {
         Cookie cookie = new Cookie(name, "");
         cookie.setHttpOnly(true);
-        cookie.setSecure(false);
+        cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge(0);                 // Quan trọng: maxAge = 0 → xóa ngay
-        cookie.setAttribute("SameSite", "Strict");
+        cookie.setAttribute("SameSite", "None");
         response.addCookie(cookie);
     }
 
