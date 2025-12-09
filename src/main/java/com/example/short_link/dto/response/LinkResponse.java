@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 @Builder
 public class LinkResponse {
     private Long id;
+    private String title;
     private String originalUrl;
     private String shortCode;
     private String qrCodeUrl;
@@ -24,6 +25,7 @@ public class LinkResponse {
     public static LinkResponse fromEntity(Link link){
         return LinkResponse.builder()
                 .id(link.getId())
+                .title(link.getTitle() == null ? link.getOriginalUrl() : link.getTitle() )
                 .originalUrl(link.getOriginalUrl())
                 .shortCode(link.getShortCode())
                 .qrCodeUrl(link.getQrCodeUrl())

@@ -7,4 +7,7 @@ import lombok.Data;
 public class UpdateLinkRequest {
     @NotBlank
     private String originalUrl;
+
+    @NotBlank
+    private String title;
 }

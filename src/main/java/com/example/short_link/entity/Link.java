@@ -17,6 +17,9 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class Link extends BaseEntityWIthUpdate implements Serializable {
+    @Column(name = "title", nullable = false, columnDefinition = "TEXT")
+    private String title;
+
     @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
     private String originalUrl;
 

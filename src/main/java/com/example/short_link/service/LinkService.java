@@ -1,6 +1,7 @@
 package com.example.short_link.service;
 
 import com.example.short_link.dto.request.LinkSearchRequest;
+import com.example.short_link.dto.request.UpdateLinkRequest;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.User;
 import org.springframework.cache.annotation.CacheEvict;
@@ -23,7 +24,7 @@ public interface LinkService {
 
     void deleteById (Long id);
 
-    Link  replaceLinkById (String replaceLink, Long id);
+    Link  replaceLinkById (UpdateLinkRequest request, Long id);
 
     Link getLinkDetails(Long id);
 }

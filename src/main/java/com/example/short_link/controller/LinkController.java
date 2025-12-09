@@ -168,7 +168,7 @@ public class LinkController {
             @PathVariable Long id,
             @RequestBody UpdateLinkRequest request) {
 
-        Link updated = linkService.replaceLinkById(request.getOriginalUrl(), id);
+        Link updated = linkService.replaceLinkById(request, id);
         return ResponseEntity.ok(LinkResponse.fromEntity(updated));
     }
 

@@ -1,6 +1,7 @@
 package com.example.short_link.service.impl;
 
 import com.example.short_link.dto.request.LinkSearchRequest;
+import com.example.short_link.dto.request.UpdateLinkRequest;
 import com.example.short_link.entity.Link;
 import com.example.short_link.entity.User;
 import com.example.short_link.exception.DataNotFoundException;
@@ -169,11 +170,17 @@ public class LinkServiceImpl implements LinkService {
     }
 
     @Override
-    public Link replaceLinkById(String replaceLink, Long id) {
+    public Link replaceLinkById(UpdateLinkRequest request, Long id) {
         Link link = shortLinkRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Link not found"));
 
-        link.setOriginalUrl(replaceLink);
+        if(request.getOriginalUrl() != null && !request.getOriginalUrl().trim().isEmpty()){
+            link.setOriginalUrl(request.getOriginalUrl() );
+        }
+
+        if(request.getTitle() != null && !request.getTitle().trim().isEmpty()){
+            link.setTitle(request.getTitle());
+        }
 
         return shortLinkRepository.save(link);
     }
