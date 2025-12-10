@@ -150,7 +150,7 @@ public class LinkController {
 
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<SimpleResponse> deleteMyLink(@PathVariable Long id) {
 
         linkService.deleteById(id);
@@ -163,7 +163,7 @@ public class LinkController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<?> updateMyLink(
             @PathVariable Long id,
             @RequestBody UpdateLinkRequest request) {

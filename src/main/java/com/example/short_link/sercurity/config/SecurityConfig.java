@@ -68,7 +68,10 @@ public class SecurityConfig {
                                         "/swagger-resources/**",
                                         "/webjars/**",
                                         "/configuration/ui",
-                                        "/configuration/security"
+                                        "/configuration/security",
+                                        "/actuator",
+                                        "/actuator/health",
+                                        "/actuator/health/*"
                                 ).permitAll()
                         //permit etc
                                 .requestMatchers(HttpMethod.POST
