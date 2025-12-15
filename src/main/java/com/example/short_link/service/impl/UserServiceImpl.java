@@ -117,12 +117,12 @@ public class UserServiceImpl implements UserService {
         //TẠO ACCESS TOKEN
         String accessToken = jwtService.generateAccessToken(userDetails);
 
-        // 6. Tạo refresh token mới
+        // Tạo refresh token mới
         String refreshToken = jwtService.generateRefreshToken(userDetails);
         Instant expiresAt = jwtService.extractExpiration(refreshToken);
 
 
-        // 7. Lấy device + IP
+        //  Lấy device + IP
         String userAgentHeader = httpRequest.getHeader("User-Agent");
         String deviceName = userAgentUtil.getDevice(userAgentHeader)
                 + " • " + userAgentUtil.getBrowser(userAgentHeader);
